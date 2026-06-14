@@ -28,9 +28,11 @@ def research_competitors(client, keyword, competitor_texts: list[dict], brand_kn
         f"COMPETITOR {i+1} ({c['url']}):\n{c['text'][:3000]}"
         for i, c in enumerate(competitor_texts)
     )
-    system = f"""You are a senior SEO strategist. Your job is to analyze competitor content and produce a structured research report.
-Use these AI visibility principles: {AI_VISIBILITY_GUIDE}
-Return only valid JSON."""
+    system = f"""You are a senior content strategist. Generate two distinct article outlines with different tones.
+Follow these SOPs: {SOPS}
+And these AI visibility principles: {AI_VISIBILITY_GUIDE}
+Return only valid JSON.
+Include as many sections as the topic genuinely needs — do not limit yourself to 2 or 3 headings. A thorough outline typically has 6-10 H2 sections, each with 1-3 H3 subsections where relevant. Base the structure entirely on the competitor research and search intent, not on any default template."""
     user = f"""Keyword: {keyword}
 Brand Knowledge: {brand_knowledge}
 
