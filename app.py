@@ -16,23 +16,28 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 html, body, [class*="css"] { font-family: 'DM Mono', monospace; font-size: 13px; }
 h1,h2,h3,.syne { font-family: 'Syne', sans-serif !important; }
-.stApp { background: #0f0f0f; color: #e0dbd0; }
+.stApp { background: #f7f6f2; color: #1a1a1a; }
 .block-container { padding: 1.5rem 2.5rem; max-width: 1300px; }
-.card { background: #181818; border: 1px solid #282828; border-radius: 3px; padding: 1.2rem 1.4rem; margin: 0.6rem 0; }
-.card.accent { border-color: #b8f000; background: #121600; }
-.card.warn { border-color: #ff6b35; background: #1a0f00; }
-.card.ok { border-color: #00c97a; background: #001a0e; }
-.tag { display:inline-block; border:1px solid #383838; color:#999; font-size:0.7rem; padding:0.1rem 0.45rem; border-radius:2px; margin:0.1rem; }
-.tag.green { border-color:#b8f000; color:#b8f000; }
-.tag.orange { border-color:#ffa040; color:#ffa040; }
-.lbl { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#555; margin-bottom:0.3rem; }
+.card { background: #ffffff; border: 1px solid #e0ddd6; border-radius: 3px; padding: 1.2rem 1.4rem; margin: 0.6rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card.accent { border-color: #5a7a00; background: #f4f9e6; }
+.card.warn { border-color: #cc4400; background: #fff4f0; }
+.card.ok { border-color: #007a4a; background: #f0faf5; }
+.tag { display:inline-block; border:1px solid #ccc; color:#666; font-size:0.7rem; padding:0.1rem 0.45rem; border-radius:2px; margin:0.1rem; }
+.tag.green { border-color:#5a7a00; color:#5a7a00; }
+.tag.orange { border-color:#b36000; color:#b36000; }
+.lbl { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin-bottom:0.3rem; }
 .score-big { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; }
-.score-big.hi { color:#b8f000; } .score-big.mid { color:#ffa040; } .score-big.lo { color:#ff4f4f; }
-.step-badge { background:#b8f000; color:#0f0f0f; font-family:'Syne',sans-serif; font-weight:700;
+.score-big.hi { color:#5a7a00; } .score-big.mid { color:#b36000; } .score-big.lo { color:#cc2200; }
+.step-badge { background:#1a1a1a; color:#f7f6f2; font-family:'Syne',sans-serif; font-weight:700;
   font-size:0.7rem; padding:0.15rem 0.5rem; border-radius:2px; margin-right:0.4rem; }
-hr { border-color:#222; }
-.stTextArea textarea { background:#141414 !important; color:#e0dbd0 !important; border-color:#333 !important; font-family:'DM Mono',monospace !important; font-size:12px !important; }
-.stTextInput input { background:#141414 !important; color:#e0dbd0 !important; border-color:#333 !important; }
+hr { border-color:#e0ddd6; }
+.stTextArea textarea { background:#ffffff !important; color:#1a1a1a !important; border-color:#d0cdc6 !important; font-family:'DM Mono',monospace !important; font-size:12px !important; }
+.stTextInput input { background:#ffffff !important; color:#1a1a1a !important; border-color:#d0cdc6 !important; }
+.stSidebar { background: #eeecea !important; }
+p, li, div { color: #1a1a1a; }
+.stRadio label, .stCheckbox label { color: #1a1a1a !important; }
+.stTextInput label, .stTextArea label, .stSelectbox label { color: #444 !important; }
+caption, .caption, small { color: #555 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,7 +78,7 @@ init_state({
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div class='syne' style='font-size:1.2rem;font-weight:800;color:#b8f000;'>SEO WRITER</div>", unsafe_allow_html=True)
+    st.markdown("<div class='syne' style='font-size:1.2rem;font-weight:800;color:#1a1a1a;'>SEO WRITER</div>", unsafe_allow_html=True)
     st.markdown("<div class='lbl' style='margin-bottom:1rem;'>AI-Powered Content Tool</div>", unsafe_allow_html=True)
 
     st.session_state.api_key = st.text_input("OpenAI API Key", value=st.session_state.api_key, type="password", placeholder="sk-...")
@@ -84,7 +89,7 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown("<div class='lbl'>Brand Knowledge</div>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:0.72rem;color:#555;margin-bottom:0.3rem;'>Voice, audience, USPs, banned words, CTAs</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:0.72rem;color:#777;margin-bottom:0.3rem;'>Voice, audience, USPs, banned words, CTAs</div>", unsafe_allow_html=True)
     st.session_state.brand_knowledge = st.text_area(
         "Brand Knowledge",
         value=st.session_state.brand_knowledge,
@@ -96,7 +101,7 @@ with st.sidebar:
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 if st.session_state.mode == "article":
     st.markdown("<h1 class='syne' style='font-size:2.2rem;font-weight:800;margin-bottom:0;'>Article Writer</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#555;font-size:0.8rem;margin-bottom:1.5rem;'>Research → Outline → Draft → Final</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888;font-size:0.8rem;margin-bottom:1.5rem;'>Research → Outline → Draft → Final</p>", unsafe_allow_html=True)
 
     # ── STEP 1: Inputs ──────────────────────────────────────────────────────
     st.markdown("<span class='step-badge'>1</span><span class='syne' style='font-size:1rem;font-weight:700;'>Setup</span>", unsafe_allow_html=True)
@@ -129,9 +134,9 @@ if st.session_state.mode == "article":
 
             if failed:
                 st.markdown("---")
-                st.markdown("<div class='lbl' style='color:#ff6b35;'>Could not open these pages — paste content manually below</div>", unsafe_allow_html=True)
+                st.markdown("<div class='lbl' style='color:#cc4400;'>Could not open these pages — paste content manually below</div>", unsafe_allow_html=True)
                 for f in failed:
-                    st.markdown(f"<div class='card warn'>⚠ <b>{f['url']}</b><br><span style='color:#aaa;font-size:0.8rem;'>{f['error']}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card warn'>⚠ <b>{f['url']}</b><br><span style='color:#888;font-size:0.8rem;'>{f['error']}</span></div>", unsafe_allow_html=True)
                     idx = [r["url"] for r in results].index(f["url"])
                     st.session_state.comp_pastes[idx] = st.text_area(
                         f"Paste content for {f['url']}",
@@ -158,23 +163,23 @@ if st.session_state.mode == "article":
                     st.session_state.final_article = ""
                 st.success("Research complete.")
 
-# ── Show failed pastes persistently and allow re-run ─────────────────
+    # ── Show failed pastes persistently and allow re-run ─────────────────
     if st.session_state.comp_results:
         failed_after = [r for r in st.session_state.comp_results if not r["success"]]
         if failed_after:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<div class='card warn'>", unsafe_allow_html=True)
-            st.markdown("<div class='lbl' style='color:#ff6b35;'>These pages could not be scraped. Paste their content below, then re-run research.</div>", unsafe_allow_html=True)
+            st.markdown("<div class='lbl' style='color:#cc4400;'>These pages could not be scraped. Paste their content below, then re-run research.</div>", unsafe_allow_html=True)
             for r in failed_after:
                 idx = st.session_state.comp_results.index(r)
-                st.markdown(f"<div style='font-size:0.8rem;color:#ff6b35;margin:0.4rem 0 0.3rem;'>&#9888; {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:0.8rem;color:#cc4400;margin:0.4rem 0 0.3rem;'>&#9888; {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
                 paste = st.text_area(
                     f"Paste for {r['url']}",
                     value=st.session_state.comp_pastes[idx],
                     height=140,
                     key=f"paste_show_{idx}",
                     label_visibility="collapsed",
-                    placeholder="Paste page text here..."
+                    placeholder="Paste the page text here..."
                 )
                 st.session_state.comp_pastes[idx] = paste
             st.markdown("</div>", unsafe_allow_html=True)
@@ -208,13 +213,13 @@ if st.session_state.mode == "article":
         r = st.session_state.research
         rc1, rc2, rc3 = st.columns(3, gap="medium")
         with rc1:
-            st.markdown(f"<div class='card'><div class='lbl'>Search Intent</div><div style='font-size:0.85rem;color:#ccc;'>{r.get('search_intent','')}</div></div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card'><div class='lbl'>Content Gaps</div>{''.join(f'<div style=\"font-size:0.82rem;color:#ccc;padding:0.2rem 0;\">→ {g}</div>' for g in r.get('content_gaps',[]))}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><div class='lbl'>Search Intent</div><div style='font-size:0.85rem;color:#333;'>{r.get('search_intent','')}</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><div class='lbl'>Content Gaps</div>{''.join(f'<div style=\"font-size:0.82rem;color:#333;padding:0.2rem 0;\">→ {g}</div>' for g in r.get('content_gaps',[]))}</div>", unsafe_allow_html=True)
         with rc2:
             st.markdown(f"<div class='card'><div class='lbl'>LSI Keywords</div>{''.join(f'<span class=\"tag\">{k}</span>' for k in r.get('lsi_keywords',[]))}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card'><div class='lbl'>Questions to Answer</div>{''.join(f'<div style=\"font-size:0.82rem;color:#ccc;padding:0.15rem 0;\">• {q}</div>' for q in r.get('questions_to_answer',[]))}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><div class='lbl'>Questions to Answer</div>{''.join(f'<div style=\"font-size:0.82rem;color:#333;padding:0.15rem 0;\">• {q}</div>' for q in r.get('questions_to_answer',[]))}</div>", unsafe_allow_html=True)
         with rc3:
-            st.markdown(f"<div class='card'><div class='lbl'>AI Visibility Recs</div>{''.join(f'<div style=\"font-size:0.8rem;color:#b8f000;padding:0.15rem 0;\">✦ {a}</div>' for a in r.get('ai_visibility_recommendations',[]))}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><div class='lbl'>AI Visibility Recs</div>{''.join(f'<div style=\"font-size:0.8rem;color:#5a7a00;padding:0.15rem 0;\">✦ {a}</div>' for a in r.get('ai_visibility_recommendations',[]))}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='card'><div class='lbl'>Recommended Schema</div>{''.join(f'<span class=\"tag green\">{s}</span>' for s in r.get('schema_types',[]))}</div>", unsafe_allow_html=True)
 
         # ── STEP 3A: Update existing article ───────────────────────────────
@@ -247,7 +252,7 @@ if st.session_state.mode == "article":
                 sc1, sc2, sc3 = st.columns(3, gap="medium")
                 with sc1:
                     v = es.get("overall_score", 0)
-                    st.markdown(f"<div class='card'><div class='lbl'>Overall Score</div><div class='score-big {sc(v)}'>{v}/100</div><div style='font-size:0.8rem;color:#888;margin-top:0.5rem;'>{es.get('summary','')}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card'><div class='lbl'>Overall Score</div><div class='score-big {sc(v)}'>{v}/100</div><div style='font-size:0.8rem;color:#555;margin-top:0.5rem;'>{es.get('summary','')}</div></div>", unsafe_allow_html=True)
                 with sc2:
                     sop_s = es.get("sop_scores", {})
                     def sop_color(v2):
@@ -256,14 +261,14 @@ if st.session_state.mode == "article":
                         return "#ff4f4f"
                     rows = "".join(
                         f"<div style='display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid #222;'>"
-                        f"<span style='color:#aaa;font-size:0.8rem;'>{k.replace('_',' ').title()}</span>"
+                        f"<span style='color:#555;font-size:0.8rem;'>{k.replace('_',' ').title()}</span>"
                         f"<span style='color:{sop_color(v2)};font-weight:700;font-size:0.82rem;'>{v2}</span></div>"
                         for k, v2 in sop_s.items()
                     )
                     st.markdown(f"<div class='card'><div class='lbl'>SOP Breakdown</div>{rows}</div>", unsafe_allow_html=True)
                 with sc3:
                     aiv = es.get("ai_visibility_score", 0)
-                    strengths = "".join(f"<div style='font-size:0.8rem;color:#b8f000;padding:0.1rem 0;'>✓ {s}</div>" for s in es.get("strengths",[]))
+                    strengths = "".join(f"<div style='font-size:0.8rem;color:#5a7a00;padding:0.1rem 0;'>✓ {s}</div>" for s in es.get("strengths",[]))
                     st.markdown(f"<div class='card'><div class='lbl'>AI Visibility</div><div class='score-big {sc(aiv)}'>{aiv}/100</div>{strengths}</div>", unsafe_allow_html=True)
 
                 st.markdown("<br><div class='lbl'>Suggestions — Confirm or Deny Each</div>", unsafe_allow_html=True)
@@ -277,7 +282,7 @@ if st.session_state.mode == "article":
 </div>
 <div class='lbl'>Issue</div><div style='font-size:0.82rem;color:#ccc;margin-bottom:0.4rem;'>{sug['issue']}</div>
 <div class='lbl'>Current</div><div style='font-size:0.8rem;color:#888;font-style:italic;margin-bottom:0.4rem;'>"{sug.get('current_text','')}"</div>
-<div class='lbl'>Suggested Fix</div><div style='font-size:0.82rem;color:#b8f000;'>{sug['suggested_fix']}</div>
+<div class='lbl'>Suggested Fix</div><div style='font-size:0.82rem;color:#5a7a00;'>{sug['suggested_fix']}</div>
 </div>""", unsafe_allow_html=True)
                     col_y, col_n, _ = st.columns([1,1,4])
                     with col_y:
@@ -319,19 +324,19 @@ if st.session_state.mode == "article":
                     card_cls = "card accent" if chosen else "card"
                     st.markdown(f"<div class='{card_cls}'>", unsafe_allow_html=True)
                     st.markdown(f"<div class='syne' style='font-size:1rem;font-weight:700;'>Outline {label} — {ol.get('tone','')}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.8rem;color:#999;margin-bottom:0.8rem;'>{ol.get('tone_rationale','')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.8rem;'>{ol.get('tone_rationale','')}</div>", unsafe_allow_html=True)
 
                     for sec in ol.get("sections", []):
                         lvl_color = "#b8f000" if sec["level"] == "H2" else "#888"
                         kws = "".join(f'<span class="tag">{k}</span>' for k in sec.get("keywords_to_use",[]))
                         st.markdown(f"""<div style='border-left:2px solid {lvl_color};padding-left:0.8rem;margin:0.5rem 0;'>
-<div style='font-size:0.88rem;font-weight:600;color:#e0dbd0;'>{sec['heading']} <span style='color:#555;font-size:0.7rem;'>{sec['level']}</span></div>
-<div style='font-size:0.78rem;color:#888;margin:0.2rem 0;'>{sec.get('rationale','')}</div>
+<div style='font-size:0.88rem;font-weight:600;color:#1a1a1a;'>{sec['heading']} <span style='color:#aaa;font-size:0.7rem;'>{sec['level']}</span></div>
+<div style='font-size:0.78rem;color:#666;margin:0.2rem 0;'>{sec.get('rationale','')}</div>
 <div style='margin:0.2rem 0;'>{kws}</div>
 <div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.3rem;'>
-  <div><div class='lbl'>From Competitors</div><div style='font-size:0.75rem;color:#aaa;'>{sec.get('from_competitor','')}</div></div>
-  <div><div class='lbl'>From Brand</div><div style='font-size:0.75rem;color:#aaa;'>{sec.get('from_brand','')}</div></div>
-  <div><div class='lbl'>AI Visibility</div><div style='font-size:0.75rem;color:#b8f000;'>{sec.get('ai_visibility_note','')}</div></div>
+  <div><div class='lbl'>From Competitors</div><div style='font-size:0.75rem;color:#555;'>{sec.get('from_competitor','')}</div></div>
+  <div><div class='lbl'>From Brand</div><div style='font-size:0.75rem;color:#555;'>{sec.get('from_brand','')}</div></div>
+  <div><div class='lbl'>AI Visibility</div><div style='font-size:0.75rem;color:#5a7a00;'>{sec.get('ai_visibility_note','')}</div></div>
 </div></div>""", unsafe_allow_html=True)
 
                     st.markdown("</div>", unsafe_allow_html=True)
@@ -349,7 +354,7 @@ if st.session_state.mode == "article":
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<span class='step-badge'>4</span><span class='syne' style='font-size:1rem;font-weight:700;'>Draft Sections</span>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.8rem;color:#888;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick which sections to preview first.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick which sections to preview first.</div>", unsafe_allow_html=True)
 
                     selected_to_draft = st.multiselect(
                         "Sections to draft", all_headings, default=all_headings[:2], key="sections_to_draft"
@@ -421,7 +426,7 @@ if st.session_state.mode == "article":
 # ── LANDING PAGE MODE ─────────────────────────────────────────────────────────
 else:
     st.markdown("<h1 class='syne' style='font-size:2.2rem;font-weight:800;margin-bottom:0;'>Landing Page Optimizer</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#555;font-size:0.8rem;margin-bottom:1.5rem;'>Scrape → Detect Sections → Select → Optimize</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888;font-size:0.8rem;margin-bottom:1.5rem;'>Scrape → Detect Sections → Select → Optimize</p>", unsafe_allow_html=True)
 
     lp1, lp2 = st.columns([1,1], gap="large")
     with lp1:
@@ -464,7 +469,7 @@ else:
         secs = st.session_state.lp_sections
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<span class='step-badge'>2</span><span class='syne' style='font-size:1rem;font-weight:700;'>Detected Sections</span>", unsafe_allow_html=True)
-        st.markdown(f"<div class='card' style='margin-bottom:1rem;'><div class='lbl'>Overall Assessment</div><div style='font-size:0.85rem;color:#ccc;'>{secs.get('overall_assessment','')}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card' style='margin-bottom:1rem;'><div class='lbl'>Overall Assessment</div><div style='font-size:0.85rem;color:#333;'>{secs.get('overall_assessment','')}</div></div>", unsafe_allow_html=True)
 
         st.markdown("<div class='lbl'>Select sections to optimize (uncheck fixed ones like features)</div>", unsafe_allow_html=True)
         selected = []
@@ -477,7 +482,7 @@ else:
                 value=rec,
                 key=f"lp_sec_{sec['name']}"
             )
-            st.markdown(f"<div style='font-size:0.75rem;color:#666;margin:-0.6rem 0 0.4rem 1.8rem;'>{sec.get('reason','')} | <i>{sec.get('current_text_snippet','')[:80]}...</i></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.75rem;color:#888;margin:-0.6rem 0 0.4rem 1.8rem;'>{sec.get('reason','')} | <i>{sec.get('current_text_snippet','')[:80]}...</i></div>", unsafe_allow_html=True)
             if checked:
                 selected.append(sec["name"])
         st.session_state.lp_selected = selected
@@ -514,6 +519,6 @@ else:
                     st.markdown(f"<div class='card'><div class='lbl'>Variation {label}</div>", unsafe_allow_html=True)
                     st.text_area(f"Copy {label} — {sugg['section_name']}", value=var.get("copy",""),
                                  height=160, key=f"lp_copy_{sugg['section_name']}_{label}", label_visibility="collapsed")
-                    st.markdown(f"<div style='font-size:0.78rem;color:#888;margin-top:0.4rem;'>{var.get('rationale','')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.78rem;color:#555;margin-top:0.4rem;'>{var.get('rationale','')}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='margin-top:0.3rem;'>{sop_tags}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.75rem;color:#b8f000;margin-top:0.3rem;'>✦ {var.get('ai_visibility_tactic','')}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.75rem;color:#5a7a00;margin-top:0.3rem;'>✦ {var.get('ai_visibility_tactic','')}</div></div>", unsafe_allow_html=True)
