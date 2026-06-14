@@ -108,6 +108,7 @@ Research: {json.dumps(research)}
 Custom Directive for Outline stage: {directive or 'None'}
 
 Generate two outlines. For each, suggest a distinct tone based on the research.
+IMPORTANT: Each outline must have 6-10 H2 sections based on the topic. The JSON schema below shows ONE example section — you must generate all sections for the full article, not just one.
 Return JSON:
 {{
   "outline_a": {{
@@ -187,7 +188,7 @@ Return JSON:
     ]
   }}
 }}"""
-    return chat_json(client, system, user, max_tokens=8000)
+    return chat_json(client, system, user, max_tokens=16000)
 
 # ── Article: draft selected sections ────────────────────────────────────────
 def draft_sections(client, keyword: str, outline: dict, selected_headings: list[str],
