@@ -158,20 +158,48 @@ if st.session_state.mode == "article":
                     st.session_state.final_article = ""
                 st.success("Research complete.")
 
-    # ── Show failed pastes if already scraped ──────────────────────────────
+# ── Show failed pastes persistently and allow re-run ─────────────────
     if st.session_state.comp_results:
         failed_after = [r for r in st.session_state.comp_results if not r["success"]]
         if failed_after:
-            st.markdown("<div class='card warn' style='margin-top:0.5rem;'>", unsafe_allow_html=True)
-            st.markdown("<div class='lbl' style='color:#ff6b35;'>Pages that couldn't be scraped — paste content to include them</div>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<div class='card warn'>", unsafe_allow_html=True)
+            st.markdown("<div class='lbl' style='color:#ff6b35;'>These pages could not be scraped. Paste their content below, then re-run research.</div>", unsafe_allow_html=True)
             for r in failed_after:
                 idx = st.session_state.comp_results.index(r)
-                st.markdown(f"<div style='font-size:0.8rem;color:#ff6b35;margin-bottom:0.3rem;'>⚠ {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
-                paste = st.text_area(f"Paste for {r['url']}", value=st.session_state.comp_pastes[idx],
-                                     height=130, key=f"paste_show_{idx}", label_visibility="collapsed",
-                                     placeholder="Paste page text here...")
+                st.markdown(f"<div style='font-size:0.8rem;color:#ff6b35;margin:0.4rem 0 0.3rem;'>&#9888; {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
+                paste = st.text_area(
+                    f"Paste for {r['url']}",
+                    value=st.session_state.comp_pastes[idx],
+                    height=140,
+                    key=f"paste_show_{idx}",
+                    label_visibility="collapsed",
+                    placeholder="Paste page text here..."
+                )
                 st.session_state.comp_pastes[idx] = paste
             st.markdown("</div>", unsafe_allow_html=True)
+
+            any_paste_filled = any(
+                st.session_state.comp_pastes[st.session_state.comp_results.index(r)].strip()
+                for r in failed_after
+            )
+            if any_paste_filled:
+                if st.button("Re-run Research with Pasted Content", type="primary", key="rerun_research"):
+                    for i, r in enumerate(st.session_state.comp_results):
+                        if not r["success"] and i < len(st.session_state.comp_pastes) and st.session_state.comp_pastes[i].strip():
+                            st.session_state.comp_results[i]["text"] = st.session_state.comp_pastes[i]
+                            st.session_state.comp_results[i]["success"] = True
+                    usable = [r for r in st.session_state.comp_results if r.get("text")]
+                    if usable:
+                        with st.spinner("Running deep research with pasted content..."):
+                            st.session_state.research = research_competitors(
+                                get_client(), st.session_state.keyword, usable, st.session_state.brand_knowledge
+                            )
+                            st.session_state.outlines = None
+                            st.session_state.drafted = None
+                            st.session_state.final_article = ""
+                        st.success("Research complete.")
+                        st.rerun()
 
     # ── STEP 2: Research display ────────────────────────────────────────────
     if st.session_state.research:
