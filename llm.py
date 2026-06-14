@@ -155,6 +155,7 @@ Strictly follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 Return only valid JSON."""
     research_summary = {k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}
+
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
