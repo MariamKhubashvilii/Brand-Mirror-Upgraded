@@ -154,10 +154,12 @@ def draft_sections(client, keyword: str, outline: dict, selected_headings: list[
 Strictly follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 Return only valid JSON."""
+    research_summary = {k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
-Research Summary: {json.dumps({{k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}})}
+Research Summary: {json.dumps(research_summary)}
+
 Custom Directive for Drafting stage: {directive or 'None'}
 
 Sections to write:
@@ -187,6 +189,7 @@ def generate_final_article(client, keyword: str, outline: dict, drafted_sections
 Strictly follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 Write in clean markdown. No preamble."""
+    research_summary = {k: research[k] for k in ['lsi_keywords','questions_to_answer','ai_visibility_recommendations','content_gaps'] if k in research}
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
@@ -195,7 +198,7 @@ Pre-drafted Sections: {json.dumps(drafted_sections)}
 User Edits/Feedback on Drafted Sections:
 {edits_block or 'None'}
 Custom Directive for Final stage: {directive or 'None'}
-Research: {json.dumps({{k: research[k] for k in ['lsi_keywords','questions_to_answer','ai_visibility_recommendations','content_gaps'] if k in research}})}
+Research: {json.dumps(research_summary)}
 
 Write the complete final article in markdown. Apply all SOPs and AI visibility principles throughout.
 Respect user edits — they reflect the preferred style and content choices."""
