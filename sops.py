@@ -32,6 +32,7 @@ SOPS = """
 31. Make content easy to skim: 2-4 sentence paragraphs, bullet points, bold key answers.
 32. Use bucket brigades to keep content conversational (e.g. "Let me explain:", "The best part?").
 33. Add at least one expert quote for credibility.
+34. -Do not use em dashes (—). Use a comma, a period, or rewrite the sentence instead.
 
 BRAND VOICE RULES:
 - Write like a real person explaining something, not a marketer.
@@ -43,6 +44,39 @@ BRAND VOICE RULES:
 - Persuasive but never pushy. End with a soft offer, not a battle cry.
 - Short paragraphs. Group information logically.
 - Ask: would a normal person actually say this? If not, rewrite it.
+
+VOICE EXAMPLES:
+PROGRAMMING
+Angle A: Beginner-friendly
+Learning to code is not as hard as people make it sound. The first week is confusing. The second week is less confusing. By the third week you're actually building things, and that's when it clicks.
+The mistake most beginners make is jumping between resources. They start a Python course, get stuck, switch to a YouTube tutorial, get bored, buy a book. Pick one thing and finish it. The resource matters less than the consistency.
+Angle B: Direct and practical
+Python is the right first language. It's readable, it's in demand, and every data, automation, and AI tool you'll ever use has a Python library. You don't need to debate this one.
+Start with the basics: variables, loops, functions. You can build something useful in a week. Not something impressive, but something that works. That's the point.
+
+ART
+Angle A: Encouraging
+Most people who want to learn to draw give up in the first month. Not because they lack talent, but because they expect to be good before they've put in the hours. You're not going to draw well at the start. That's not failure, that's just how it works.
+The people who get good are the ones who keep going when the work looks bad. And it will look bad for a while. That's fine.
+Angle B: Practical
+You don't need expensive supplies to start. A pencil, some printer paper, and 20 minutes a day is enough. The gear doesn't make the difference at the beginning. Time does.
+Pick one thing to practice at a time. Hands, perspective, shading. Don't try to improve everything at once or you'll improve nothing.
+
+ECOMMERCE
+Angle A: No-fluff overview
+Starting an online store is straightforward. Finding products people actually want to buy is not. That's where most people get stuck, and it's the part worth spending time on before you build anything.
+Spend a week researching before you spend a dollar on inventory. Look at what's selling, what the reviews complain about, and whether there's a gap you can fill. Then build the store.
+Angle B: Honest about the hard parts
+Most ecommerce stores fail because of traffic, not product. You can have a great product and a clean store and still make zero sales if nobody finds you. Marketing is not optional.
+Figure out one channel before you launch. SEO, paid ads, or social. Get good at one. Add more later.
+
+PERSONAL BLOG
+Angle A: Why bother
+Nobody needs another blog. There are already millions of them. The question is whether you have something specific to say to a specific kind of person. If you do, a blog is still one of the best ways to build an audience from scratch.
+You don't need to post every day. You need to post things worth reading. One good piece a month beats four forgettable ones.
+Angle B: Getting started
+Pick a topic you know well enough to be useful and narrow enough to be specific. "Life advice" is too broad. "Freelancing as a designer with a full-time job" is specific. Specific is better.
+Write the first post before you worry about the design, the domain name, or the newsletter setup. Most blogs never launch because the writer spent two weeks picking fonts.
 """
 
 AI_VISIBILITY_GUIDE = """

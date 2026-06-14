@@ -1,4 +1,5 @@
 import openai
+import anthropic
 import json
 from sops import SOPS, AI_VISIBILITY_GUIDE
 
@@ -10,6 +11,15 @@ def chat(client, system, user, temperature=0.5, max_tokens=4000):
         max_tokens=max_tokens,
     )
     return resp.choices[0].message.content.strip()
+
+def chat_claude(claude_client, system, user, max_tokens=8000):
+    resp = claude_client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user}]
+    )
+    return resp.content[0].text.strip()
 
 def chat_json(client, system, user, temperature=0.4, max_tokens=8000):
     resp = client.chat.completions.create(
@@ -108,7 +118,6 @@ Research: {json.dumps(research)}
 Custom Directive for Outline stage: {directive or 'None'}
 
 Generate two outlines. For each, suggest a distinct tone based on the research.
-IMPORTANT: Each outline must have 6-10 H2 sections based on the topic. The JSON schema below shows ONE example section — you must generate all sections for the full article, not just one.
 Return JSON:
 {{
   "outline_a": {{
@@ -188,18 +197,14 @@ Return JSON:
     ]
   }}
 }}"""
-    return chat_json(client, system, user, max_tokens=16000)
+    return chat_json(client, system, user, max_tokens=8000)
 
 # ── Article: draft selected sections ────────────────────────────────────────
-def draft_sections(client, keyword: str, outline: dict, selected_headings: list[str],
+def draft_sections(client, claude_client, keyword: str, outline: dict, selected_headings: list[str],
                    brand_knowledge: str, research: dict, directive: str = "") -> dict:
     sel_sections = [s for s in outline["sections"] if s["heading"] in selected_headings]
-    system = f"""You are an expert SEO content writer. Write the selected article sections.
-Strictly follow these SOPs: {SOPS}
-And these AI visibility principles: {AI_VISIBILITY_GUIDE}
-Return only valid JSON."""
     research_summary = {k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}
-
+    system = f"""{VOICE_SYSTEM}"""
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
@@ -221,19 +226,16 @@ Return JSON:
     }}
   ]
 }}"""
-    return chat_json(client, system, user, max_tokens=4000)
+    return chat_json(claude_client, system, user, max_tokens=8000)
 
 # ── Article: final version ───────────────────────────────────────────────────
-def generate_final_article(client, keyword: str, outline: dict, drafted_sections: list[dict],
+def generate_final_article(client, claude_client, keyword: str, outline: dict, drafted_sections: list[dict],
                             user_edits: dict, brand_knowledge: str, research: dict, directive: str = "") -> str:
     edits_block = "\n".join(
         f"Section '{h}': User changed to: {t}"
         for h, t in user_edits.items() if t.strip()
     )
-    system = f"""You are an expert SEO content writer producing a final polished article.
-Strictly follow these SOPs: {SOPS}
-And these AI visibility principles: {AI_VISIBILITY_GUIDE}
-Write in clean markdown. No preamble."""
+    system = f"""{FINAL_SYSTEM}"""
     research_summary = {k: research[k] for k in ['lsi_keywords','questions_to_answer','ai_visibility_recommendations','content_gaps'] if k in research}
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
@@ -247,7 +249,7 @@ Research: {json.dumps(research_summary)}
 
 Write the complete final article in markdown. Apply all SOPs and AI visibility principles throughout.
 Respect user edits — they reflect the preferred style and content choices."""
-    return chat(client, system, user, temperature=0.6, max_tokens=4000)
+    return chat_claude(claude_client, system, user, max_tokens=8000)
 
 # ── Landing Page: analyze sections ──────────────────────────────────────────
 def analyze_landing_page_sections(client, page_text: str, page_sections: list[dict],

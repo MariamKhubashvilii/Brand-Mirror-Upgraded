@@ -1,5 +1,6 @@
 import streamlit as st
 import openai
+import anthropic
 import json
 from scraper import scrape_url
 from llm import (
@@ -50,13 +51,16 @@ def sc(v):
 def get_client():
     return openai.OpenAI(api_key=st.session_state.api_key)
 
+def get_claude_client():
+    return anthropic.Anthropic(api_key=st.session_state.anthropic_key)
+
 def init_state(keys):
     for k, v in keys.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 init_state({
-    "api_key": "", "brand_knowledge": "",
+    "api_key": "", "anthropic_key": "", "brand_knowledge": "",
     "mode": "article",
     # article
     "keyword": "", "comp_urls": ["","",""],
@@ -83,6 +87,9 @@ with st.sidebar:
     st.markdown("<div class='lbl' style='margin-bottom:1rem;'>AI-Powered Content Tool</div>", unsafe_allow_html=True)
 
     st.session_state.api_key = st.text_input("OpenAI API Key", value=st.session_state.api_key, type="password", placeholder="sk-...")
+    st.markdown("---")
+
+    st.session_state.anthropic_key = st.text_input("Anthropic API Key", value=st.session_state.anthropic_key, type="password", placeholder="sk-ant-...")
     st.markdown("---")
 
     mode = st.radio("Mode", ["Article", "Landing Page"], index=0 if st.session_state.mode == "article" else 1)
@@ -392,7 +399,7 @@ if st.session_state.mode == "article":
                     if st.button("Draft Selected Sections", disabled=not (st.session_state.api_key and selected_to_draft)):
                         with st.spinner("Writing sections..."):
                             st.session_state.drafted = draft_sections(
-                                get_client(), st.session_state.keyword, chosen_ol,
+                                get_client(), get_claude_client(), st.session_state.keyword, chosen_ol,
                                 selected_to_draft, st.session_state.brand_knowledge,
                                 st.session_state.research, st.session_state.directive_draft
                             )
@@ -424,7 +431,7 @@ if st.session_state.mode == "article":
                         if st.button("✍️ Write Full Article", type="primary", disabled=not st.session_state.api_key):
                             with st.spinner("Writing full article..."):
                                 st.session_state.final_article = generate_final_article(
-                                    get_client(), st.session_state.keyword, chosen_ol,
+                                    get_client(), get_claude_client(), st.session_state.keyword, chosen_ol,
                                     st.session_state.drafted.get("drafted_sections", []),
                                     st.session_state.user_edits, st.session_state.brand_knowledge,
                                     st.session_state.research, st.session_state.directive_final
