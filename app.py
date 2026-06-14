@@ -17,28 +17,80 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 html, body, [class*="css"] { font-family: 'DM Mono', monospace; font-size: 13px; }
 h1,h2,h3,.syne { font-family: 'Syne', sans-serif !important; }
-.stApp { background: #f7f6f2; color: #1a1a1a; }
+.stApp { background: #f5f7fa; color: #1a1a2e; }
 .block-container { padding: 1.5rem 2.5rem; max-width: 1300px; }
-.card { background: #ffffff; border: 1px solid #e0ddd6; border-radius: 3px; padding: 1.2rem 1.4rem; margin: 0.6rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.card.accent { border-color: #5a7a00; background: #f4f9e6; }
-.card.warn { border-color: #cc4400; background: #fff4f0; }
-.card.ok { border-color: #007a4a; background: #f0faf5; }
+
+/* Cards */
+.card { background: #ffffff; border: 1px solid #d0d8e8; border-radius: 3px; padding: 1.2rem 1.4rem; margin: 0.6rem 0; box-shadow: 0 1px 3px rgba(30,60,120,0.07); }
+.card.accent { border-color: #2a7abf; background: #eef5fc; }
+.card.warn { border-color: #7b3fa0; background: #f8f0fc; }
+.card.ok { border-color: #1a7a6e; background: #edfaf7; }
+
+/* Tags */
 .tag { display:inline-block; border:1px solid #ccc; color:#666; font-size:0.7rem; padding:0.1rem 0.45rem; border-radius:2px; margin:0.1rem; }
-.tag.green { border-color:#5a7a00; color:#5a7a00; }
-.tag.orange { border-color:#b36000; color:#b36000; }
-.lbl { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin-bottom:0.3rem; }
+.tag.green { border-color:#2a7abf; color:#2a7abf; }
+.tag.orange { border-color:#7b3fa0; color:#7b3fa0; }
+
+/* Labels */
+.lbl { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#6a7a99; margin-bottom:0.3rem; }
+
+/* Score */
 .score-big { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; }
-.score-big.hi { color:#5a7a00; } .score-big.mid { color:#b36000; } .score-big.lo { color:#cc2200; }
-.step-badge { background:#1a1a1a; color:#f7f6f2; font-family:'Syne',sans-serif; font-weight:700;
+.score-big.hi { color:#1a7a6e; }
+.score-big.mid { color:#2a7abf; }
+.score-big.lo { color:#9b3060; }
+
+/* Step badge */
+.step-badge { background:#1a2a4a; color:#f0f4ff; font-family:'Syne',sans-serif; font-weight:700;
   font-size:0.7rem; padding:0.15rem 0.5rem; border-radius:2px; margin-right:0.4rem; }
-hr { border-color:#e0ddd6; }
-.stTextArea textarea { background:#ffffff !important; color:#1a1a1a !important; border-color:#d0cdc6 !important; font-family:'DM Mono',monospace !important; font-size:12px !important; }
-.stTextInput input { background:#ffffff !important; color:#1a1a1a !important; border-color:#d0cdc6 !important; }
-.stSidebar { background: #eeecea !important; }
-p, li, div { color: #1a1a1a; }
-.stRadio label, .stCheckbox label { color: #1a1a1a !important; }
-.stTextInput label, .stTextArea label, .stSelectbox label { color: #444 !important; }
-caption, .caption, small { color: #555 !important; }
+
+hr { border-color:#d0d8e8; }
+
+/* Inputs */
+.stTextArea textarea { background:#ffffff !important; color:#1a1a2e !important; border-color:#c0cce0 !important; font-family:'DM Mono',monospace !important; font-size:12px !important; }
+.stTextInput input { background:#ffffff !important; color:#1a1a2e !important; border-color:#c0cce0 !important; }
+.stSidebar { background: #eaeef5 !important; }
+
+/* Buttons — primary */
+.stButton > button[kind="primary"] {
+  background: #2a7abf !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 3px !important;
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+}
+.stButton > button[kind="primary"]:hover {
+  background: #1a5a9a !important;
+  color: #ffffff !important;
+}
+
+/* Buttons — secondary */
+.stButton > button[kind="secondary"] {
+  background: #ffffff !important;
+  color: #2a7abf !important;
+  border: 1px solid #2a7abf !important;
+  border-radius: 3px !important;
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 600 !important;
+}
+.stButton > button[kind="secondary"]:hover {
+  background: #eef5fc !important;
+  color: #1a5a9a !important;
+}
+
+/* Disabled buttons */
+.stButton > button:disabled {
+  background: #c0cce0 !important;
+  color: #8899bb !important;
+  border: none !important;
+}
+
+p, li, div { color: #1a1a2e; }
+.stRadio label, .stCheckbox label { color: #1a1a2e !important; }
+.stTextInput label, .stTextArea label, .stSelectbox label { color: #3a4a6a !important; }
+caption, .caption, small { color: #6a7a99 !important; }
 </style>
 """, unsafe_allow_html=True)
 
