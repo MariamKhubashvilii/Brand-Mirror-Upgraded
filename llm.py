@@ -204,7 +204,35 @@ def draft_sections(client, claude_client, keyword: str, outline: dict, selected_
                    brand_knowledge: str, research: dict, directive: str = "") -> dict:
     sel_sections = [s for s in outline["sections"] if s["heading"] in selected_headings]
     research_summary = {k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}
-    system = f"""{VOICE_SYSTEM}"""
+    system = f"""You are an expert content writer. Write the selected article sections.
+Follow these SOPs: {SOPS}
+Follow these AI visibility principles: {AI_VISIBILITY_GUIDE}
+
+VOICE EXAMPLES - match this tone and style exactly:
+
+---
+You have decided to learn data science. Now you are staring at two names that keep coming up: DataCamp and Coursera. Both teach data skills. Both have Python courses. Both have thousands of students. So which one is actually worth your time?
+
+The honest answer is it depends on how you learn. This guide breaks down what each platform does well, where they fall short, and who they are actually built for.
+---
+DataCamp puts you in the code from day one. There are no long video lectures to sit through. You read a short explanation, then write actual code in the browser to move forward. That is the whole model.
+
+It works well if you learn by doing. It works less well if you like understanding the theory before you touch anything.
+---
+DataCamp runs on a subscription, around $25/month if you pay annually. That gets you access to everything. Coursera works differently. Individual courses are free to audit, but certificates cost money, usually $49 per course or $59/month for Coursera Plus.
+
+If you want one platform and a clear learning path, DataCamp is simpler. If you want to pick specific courses or earn university-backed certificates, Coursera makes more sense.
+---
+
+NEVER do this:
+- Bold random phrases mid-sentence
+- Use em dashes. Use a comma or a period instead.
+- Use words like: significantly, comprehensive, leverage, dive deep, innovative, seamless, robust, transformative, cutting-edge, powerful, elevate, unlock
+- Start sentences with "When selecting", "It is important to", "In conclusion", "In today's"
+- State the obvious
+- Repeat the same idea in different words
+
+Return only valid JSON."""
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
@@ -235,7 +263,34 @@ def generate_final_article(client, claude_client, keyword: str, outline: dict, d
         f"Section '{h}': User changed to: {t}"
         for h, t in user_edits.items() if t.strip()
     )
-    system = f"""{FINAL_SYSTEM}"""
+    system = f"""You are an expert content writer producing a final polished article.
+Follow these SOPs: {SOPS}
+Follow these AI visibility principles: {AI_VISIBILITY_GUIDE}
+Write in clean markdown. No preamble.
+
+VOICE EXAMPLES - match this tone and style exactly:
+
+---
+You have decided to learn data science. Now you are staring at two names that keep coming up: DataCamp and Coursera. Both teach data skills. Both have Python courses. Both have thousands of students. So which one is actually worth your time?
+
+The honest answer is it depends on how you learn. This guide breaks down what each platform does well, where they fall short, and who they are actually built for.
+---
+DataCamp puts you in the code from day one. There are no long video lectures to sit through. You read a short explanation, then write actual code in the browser to move forward. That is the whole model.
+
+It works well if you learn by doing. It works less well if you like understanding the theory before you touch anything.
+---
+DataCamp runs on a subscription, around $25/month if you pay annually. That gets you access to everything. Coursera works differently. Individual courses are free to audit, but certificates cost money, usually $49 per course or $59/month for Coursera Plus.
+
+If you want one platform and a clear learning path, DataCamp is simpler. If you want to pick specific courses or earn university-backed certificates, Coursera makes more sense.
+---
+
+NEVER do this:
+- Bold random phrases mid-sentence
+- Use em dashes. Use a comma or a period instead.
+- Use words like: significantly, comprehensive, leverage, dive deep, innovative, seamless, robust, transformative, cutting-edge, powerful, elevate, unlock
+- Start sentences with "When selecting", "It is important to", "In conclusion", "In today's"
+- State the obvious
+- Repeat the same idea in different words"""
     research_summary = {k: research[k] for k in ['lsi_keywords','questions_to_answer','ai_visibility_recommendations','content_gaps'] if k in research}
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
