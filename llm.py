@@ -21,6 +21,17 @@ def chat_claude(claude_client, system, user, max_tokens=8000):
     )
     return resp.content[0].text.strip()
 
+def chat_claude_json(claude_client, system, user, max_tokens=8000):
+    resp = claude_client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user}]
+    )
+    raw = resp.content[0].text.strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    return json.loads(raw)
+
 def chat_json(client, system, user, temperature=0.4, max_tokens=8000):
     resp = client.chat.completions.create(
         model="gpt-4o",
@@ -254,7 +265,7 @@ Return JSON:
     }}
   ]
 }}"""
-    return chat_json(claude_client, system, user, max_tokens=8000)
+    return chat_claude_json(claude_client, system, user, max_tokens=8000)
 
 # ── Article: final version ───────────────────────────────────────────────────
 def generate_final_article(client, claude_client, keyword: str, outline: dict, drafted_sections: list[dict],
