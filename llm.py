@@ -157,7 +157,13 @@ Return only valid JSON."""
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
-f"Research Summary: {json.dumps({{{k: research[k] for k in ['search_intent','lsi_keywords','questions_to_answer','ai_visibility_recommendations'] if k in research}}})}"
+
+filtered_research = {
+    k: research[k] 
+    for k in ['search_intent', 'lsi_keywords', 'questions_to_answer', 'ai_visibility_recommendations']
+    if k in research
+}
+f"Research Summary: {json.dumps(filtered_research)}"
 
 Custom Directive for Drafting stage: {directive or 'None'}
 
