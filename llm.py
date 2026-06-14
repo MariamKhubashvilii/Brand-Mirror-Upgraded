@@ -158,12 +158,11 @@ Return only valid JSON."""
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
 
-filtered_research = {
-    k: research[k] 
-    for k in ['search_intent', 'lsi_keywords', 'questions_to_answer', 'ai_visibility_recommendations']
-    if k in research
-}
-f"Research Summary: {json.dumps(filtered_research)}"
+filtered_research = {}
+for k in ['search_intent', 'lsi_keywords', 'questions_to_answer', 'ai_visibility_recommendations']:
+    if k in research:
+        filtered_research[k] = research[k]
+        print(f"Adding {k}") 
 
 Custom Directive for Drafting stage: {directive or 'None'}
 
