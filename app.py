@@ -329,7 +329,10 @@ if st.session_state.mode == "article":
 
                     for sec in ol.get("sections", []):
                         lvl_color = "#b8f000" if sec["level"] == "H2" else "#888"
-                        kws = "".join(f'<span class="tag">{k}</span>' for k in sec.get("keywords_to_use",[]))
+                        kws = "".join(
+                            f'<span class="tag" title="{k.get("source","") } — {k.get("why","")}">{k.get("keyword", k) if isinstance(k, dict) else k}</span>'
+                            for k in sec.get("keywords_to_use", [])
+                        )
                         st.markdown(f"""<div style='border-left:2px solid {lvl_color};padding-left:0.8rem;margin:0.5rem 0;'>
 <div style='font-size:0.88rem;font-weight:600;color:#1a1a1a;'>{sec['heading']} <span style='color:#aaa;font-size:0.7rem;'>{sec['level']}</span></div>
 <div style='font-size:0.78rem;color:#666;margin:0.2rem 0;'>{sec.get('rationale','')}</div>
