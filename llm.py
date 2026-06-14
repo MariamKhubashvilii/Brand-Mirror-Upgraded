@@ -114,14 +114,34 @@ Return JSON:
     "sections": [
       {{
         "heading": "string",
-        "level": "H2|H3",
+        "level": "H2",
         "type": "intro|body|faq|cta|conclusion",
-        "key_points": ["point1", "point2"],
-        "keywords_to_use": ["kw1"],
+        "key_points": ["point1", "point2", "point3", "point4", "point5"],
+        "keywords_to_use": [
+          {{"keyword": "kw1", "source": "competitor 1 — used in their H2", "why": "high frequency, matches search intent"}},
+          {{"keyword": "kw2", "source": "competitor 2 — found in body copy", "why": "LSI term, adds semantic coverage"}}
+        ],
+        "entities": ["specific brands, tools, studies, stats, or names to mention"],
         "from_competitor": "what we took from competitor research",
         "from_brand": "what comes from brand knowledge/voice",
         "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists"
+        "rationale": "why this section exists",
+        "word_count_target": 150,
+        "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
+        "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
+        "h3_subsections": [
+          {{
+            "heading": "string",
+            "key_points": ["point1", "point2", "point3"],
+            "keywords_to_use": [
+              {{"keyword": "kw1", "source": "competitor 1 — used in meta", "why": "directly relevant to subtopic"}},
+              {{"keyword": "kw2", "source": "brand knowledge", "why": "aligns with brand USP"}}
+            ],
+            "entities": ["specific entities for this subsection"],
+            "content_brief": "what this subsection covers",
+            "word_count_target": 80
+          }}
+        ]
       }}
     ]
   }},
@@ -132,14 +152,34 @@ Return JSON:
     "sections": [
       {{
         "heading": "string",
-        "level": "H2|H3",
+        "level": "H2",
         "type": "intro|body|faq|cta|conclusion",
-        "key_points": ["point1", "point2"],
-        "keywords_to_use": ["kw1"],
+        "key_points": ["point1", "point2", "point3", "point4", "point5"],
+        "keywords_to_use": [
+          {{"keyword": "kw1", "source": "competitor 1 — used in their H2", "why": "high frequency, matches search intent"}},
+          {{"keyword": "kw2", "source": "competitor 2 — found in body copy", "why": "LSI term, adds semantic coverage"}}
+        ],
+        "entities": ["specific brands, tools, studies, stats, or names to mention"],
         "from_competitor": "what we took from competitor research",
         "from_brand": "what comes from brand knowledge/voice",
         "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists"
+        "rationale": "why this section exists",
+        "word_count_target": 150,
+        "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
+        "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
+        "h3_subsections": [
+          {{
+            "heading": "string",
+            "key_points": ["point1", "point2", "point3"],
+            "keywords_to_use": [
+              {{"keyword": "kw1", "source": "competitor 1 — used in meta", "why": "directly relevant to subtopic"}},
+              {{"keyword": "kw2", "source": "brand knowledge", "why": "aligns with brand USP"}}
+            ],
+            "entities": ["specific entities for this subsection"],
+            "content_brief": "what this subsection covers",
+            "word_count_target": 80
+          }}
+        ]
       }}
     ]
   }}
