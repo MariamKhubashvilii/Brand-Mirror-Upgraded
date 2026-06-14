@@ -11,7 +11,7 @@ def chat(client, system, user, temperature=0.5, max_tokens=4000):
     )
     return resp.choices[0].message.content.strip()
 
-def chat_json(client, system, user, temperature=0.4, max_tokens=4000):
+def chat_json(client, system, user, temperature=0.4, max_tokens=8000):
     resp = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -187,7 +187,7 @@ Return JSON:
     ]
   }}
 }}"""
-    return chat_json(client, system, user)
+    return chat_json(client, system, user, max_tokens=8000)
 
 # ── Article: draft selected sections ────────────────────────────────────────
 def draft_sections(client, keyword: str, outline: dict, selected_headings: list[str],
