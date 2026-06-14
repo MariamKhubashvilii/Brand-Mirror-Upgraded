@@ -32,6 +32,17 @@ SOPS = """
 31. Make content easy to skim: 2-4 sentence paragraphs, bullet points, bold key answers.
 32. Use bucket brigades to keep content conversational (e.g. "Let me explain:", "The best part?").
 33. Add at least one expert quote for credibility.
+
+BRAND VOICE RULES:
+- Write like a real person explaining something, not a marketer.
+- Prefer specific details over grand statements. "We spend 30 hours searching" beats "comprehensive solution."
+- One idea per sentence. Never say the same thing twice in different words.
+- Let benefits show through examples, don't announce them.
+- Avoid: delve, crucial, robust, seamless, leverage, comprehensive, optimize, unlock, elevate, transformative, dynamic, innovative, cutting-edge, powerful, revolutionary, navigate, journey, ecosystem, landscape.
+- Prefer: help, use, choose, make, find, create, check, order, print, send, work.
+- Persuasive but never pushy. End with a soft offer, not a battle cry.
+- Short paragraphs. Group information logically.
+- Ask: would a normal person actually say this? If not, rewrite it.
 """
 
 AI_VISIBILITY_GUIDE = """

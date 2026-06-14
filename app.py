@@ -67,6 +67,7 @@ init_state({
     "drafted": None, "user_edits": {},
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
+    "outline_feedback": "",
     # landing page
     "lp_url": "", "lp_result": None,
     "lp_sections": None, "lp_selected": [],
@@ -342,6 +343,26 @@ if st.session_state.mode == "article":
                     st.markdown("</div>", unsafe_allow_html=True)
                     if st.button(f"Choose Outline {label}", key=f"choose_{label}"):
                         st.session_state.chosen_outline = label
+                        st.session_state.drafted = None
+                        st.session_state.final_article = ""
+                        st.rerun()
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.session_state.outline_feedback = st.text_area(
+                    "Feedback on outlines (optional)",
+                    value=st.session_state.outline_feedback,
+                    placeholder="e.g. make outline A shorter, add a comparison section, remove the FAQ from B",
+                    height=80,
+                    key="outline_fb"
+                )
+                if st.button("🔄 Regenerate Outlines", disabled=not st.session_state.api_key):
+                    with st.spinner("Regenerating outlines..."):
+                        st.session_state.outlines = generate_outlines(
+                            get_client(), st.session_state.keyword,
+                            st.session_state.research, st.session_state.brand_knowledge,
+                            directive=st.session_state.outline_feedback
+                        )
+                        st.session_state.chosen_outline = None
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
                         st.rerun()
