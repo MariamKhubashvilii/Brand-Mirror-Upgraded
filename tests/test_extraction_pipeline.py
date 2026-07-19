@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from extraction import build_competitor_context
 from llm import build_entity_frequency_table, research_competitors
+from scraper import parse_pasted_html
 
 
 class FakeResponse:
@@ -82,6 +83,16 @@ def test_build_competitor_context_keeps_pasted_competitors_and_marks_outline_sou
     assert len(context) == 1
     assert context[0]["outline_source"] == "inferred_from_paste"
     assert context[0]["raw_text"] == item["text"]
+
+
+def test_parse_pasted_html_handles_inspect_style_fragments():
+    html = '<div class="dark-theme"><div><p>Python is popular.</p><ul><li>NumPy</li><li>Pandas</li></ul><h2>Libraries</h2><p>Great for data science.</p></div></div>'
+
+    result = parse_pasted_html(html, label="https://example.com")
+
+    assert result["success"] is True
+    assert "Python" in result["text"]
+    assert "NumPy" in result["text"]
 
 
 def test_build_entity_frequency_table_uses_full_text_when_available():

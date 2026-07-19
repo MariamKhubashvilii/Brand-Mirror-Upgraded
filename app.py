@@ -3,7 +3,7 @@ import streamlit as st
 import openai
 import anthropic
 import json
-from scraper import scrape_url
+from scraper import scrape_url, parse_pasted_html
 from extraction import build_competitor_context
 
 try:
@@ -138,7 +138,11 @@ init_state({
     "lp_research": None,
     # scrape pastes
     "comp_pastes": ["","",""],
+    "comp_html_pastes": ["","","],
+    "own_html_paste": "",
     "lp_comp_pastes": ["", ""],
+    "lp_comp_html_pastes": ["", ""],
+    "lp_html_paste": "",
 })
 
 
@@ -189,10 +193,28 @@ if st.session_state.mode == "article":
         st.session_state.keyword = st.text_input("Target Keyword", value=st.session_state.keyword, placeholder="e.g. custom bumper stickers")
         st.markdown("<div class='lbl' style='margin-top:0.6rem;'>Your page URL (leave blank for new article)</div>", unsafe_allow_html=True)
         st.session_state.own_url = st.text_input("Your URL", value=st.session_state.own_url, placeholder="https://yoursite.com/article (blank = new)", label_visibility="collapsed")
+        with st.expander("Already have HTML for your page? Paste it here to skip scraping", expanded=False):
+            st.session_state.own_html_paste = st.text_area(
+                "HTML for your page",
+                value=st.session_state.own_html_paste,
+                height=120,
+                key="own_html_paste_input",
+                label_visibility="collapsed",
+                placeholder="Paste full HTML or an Inspect element snippet here"
+            )
     with c2:
         st.markdown("<div class='lbl'>Competitor URLs (up to 3)</div>", unsafe_allow_html=True)
         for i in range(3):
             st.session_state.comp_urls[i] = st.text_input(f"Competitor {i+1}", value=st.session_state.comp_urls[i], placeholder=f"https://competitor{i+1}.com/...", label_visibility="collapsed", key=f"curl_{i}")
+            with st.expander(f"Already have HTML for Competitor {i+1}?", expanded=False):
+                st.session_state.comp_html_pastes[i] = st.text_area(
+                    f"HTML for Competitor {i+1}",
+                    value=st.session_state.comp_html_pastes[i],
+                    height=120,
+                    key=f"comp_html_{i}",
+                    label_visibility="collapsed",
+                    placeholder="Paste full HTML or an Inspect element snippet here"
+                )
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -204,8 +226,13 @@ if st.session_state.mode == "article":
             results = []
             failed = []
             with st.spinner("Scraping competitor pages..."):
-                for url in urls:
-                    r = scrape_url(url)
+                for i, url in enumerate(urls):
+                    html_paste = st.session_state.comp_html_pastes[i].strip() if i < len(st.session_state.comp_html_pastes) else ""
+                    if html_paste:
+                        r = parse_pasted_html(html_paste, label=url)
+                        r["url"] = url
+                    else:
+                        r = scrape_url(url)
                     results.append(r)
                     if not r["success"]:
                         failed.append(r)
@@ -344,7 +371,12 @@ if st.session_state.mode == "article":
 
             if st.button("Score My Article", disabled=not st.session_state.api_key):
                 with st.spinner("Scraping your page..."):
-                    own = scrape_url(st.session_state.own_url)
+                    own_html = st.session_state.own_html_paste.strip()
+                    if own_html:
+                        own = parse_pasted_html(own_html, label=st.session_state.own_url)
+                        own["url"] = st.session_state.own_url
+                    else:
+                        own = scrape_url(st.session_state.own_url)
                 if not own["success"]:
                     st.error(f"Could not scrape your page: {own['error']}")
                     pasted = st.text_area("Paste your article content here", value="", height=180, placeholder="Paste at least 100 words of article text...")
@@ -574,15 +606,38 @@ else:
     lp1, lp2 = st.columns([1,1], gap="large")
     with lp1:
         st.session_state.lp_url = st.text_input("Landing Page URL", value=st.session_state.lp_url, placeholder="https://yoursite.com/product-page")
+        with st.expander("Already have HTML for this landing page?", expanded=False):
+            st.session_state.lp_html_paste = st.text_area(
+                "HTML for landing page",
+                value=st.session_state.lp_html_paste,
+                height=120,
+                key="lp_html_paste_input",
+                label_visibility="collapsed",
+                placeholder="Paste full HTML or an Inspect element snippet here"
+            )
         st.session_state.keyword = st.text_input("Target Keyword", value=st.session_state.keyword, placeholder="e.g. custom bumper stickers", key="lp_kw")
     with lp2:
         st.markdown("<div class='lbl'>Optional: competitor URLs for context</div>", unsafe_allow_html=True)
         for i in range(2):
             st.session_state.comp_urls[i] = st.text_input(f"Competitor {i+1}", value=st.session_state.comp_urls[i], placeholder=f"https://...", label_visibility="collapsed", key=f"lp_curl_{i}")
+            with st.expander(f"Already have HTML for Competitor {i+1}?", expanded=False):
+                st.session_state.lp_comp_html_pastes[i] = st.text_area(
+                    f"HTML for competitor {i+1}",
+                    value=st.session_state.lp_comp_html_pastes[i],
+                    height=120,
+                    key=f"lp_comp_html_{i}",
+                    label_visibility="collapsed",
+                    placeholder="Paste full HTML or an Inspect element snippet here"
+                )
 
     if st.button("🔍 Scrape & Analyze Page", type="primary", disabled=not (st.session_state.api_key and st.session_state.lp_url)):
         with st.spinner("Scraping your landing page..."):
-            result = scrape_url(st.session_state.lp_url)
+            lp_html = st.session_state.lp_html_paste.strip()
+            if lp_html:
+                result = parse_pasted_html(lp_html, label=st.session_state.lp_url)
+                result["url"] = st.session_state.lp_url
+            else:
+                result = scrape_url(st.session_state.lp_url)
         if not result["success"]:
             st.error(f"Could not scrape page: {result['error']}")
             pasted = st.text_area("Paste your landing page content here", value="", height=180, placeholder="Paste at least 100 words of page content...")
@@ -596,12 +651,17 @@ else:
             comp_texts = []
             if comp_urls:
                 with st.spinner("Scraping competitor pages for context..."):
-                    for u in comp_urls:
-                        cr = scrape_url(u)
+                    for i, u in enumerate(comp_urls):
+                        html_paste = st.session_state.lp_comp_html_pastes[i].strip() if i < len(st.session_state.lp_comp_html_pastes) else ""
+                        if html_paste:
+                            cr = parse_pasted_html(html_paste, label=u)
+                            cr["url"] = u
+                        else:
+                            cr = scrape_url(u)
                         if cr["success"]:
                             comp_texts.append(cr)
                         else:
-                            idx = comp_urls.index(u)
+                            idx = i
                             paste = st.text_area(f"Paste competitor content for {u}", value=st.session_state.lp_comp_pastes[idx], height=120, key=f"lp_comp_paste_{idx}")
                             st.session_state.lp_comp_pastes[idx] = paste
                             if is_usable_paste(paste):
