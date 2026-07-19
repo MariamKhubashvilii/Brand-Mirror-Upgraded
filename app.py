@@ -546,6 +546,19 @@ if st.session_state.mode == "article":
                     edited_records = edited.to_dict("records") if hasattr(edited, "to_dict") else edited
                     post_records = post_list.to_dict("records") if hasattr(post_list, "to_dict") else post_list
                     edited_skeletons[label] = dict(skeleton, pre_list=pre_records, the_list=edited_records, post_list=post_records)
+                    full_heading_sequence = (
+                        [entry.get("heading", "Untitled section") for entry in pre_records if isinstance(entry, dict)]
+                        + [entry.get("name", "Untitled item") for entry in edited_records if isinstance(entry, dict)]
+                        + [entry.get("heading", "Untitled section") for entry in post_records if isinstance(entry, dict)]
+                    )
+                    headings_html = "".join(
+                        f"<div style='padding:0.15rem 0;color:#333;'>{number}. {html.escape(str(heading))} <span style='color:#8899bb;font-size:0.7rem;'>H2</span></div>"
+                        for number, heading in enumerate(full_heading_sequence, start=1)
+                    )
+                    st.markdown(
+                        f"<div class='card accent'><div class='lbl'>Complete H2 sequence — {len(full_heading_sequence)} headings</div>{headings_html}</div>",
+                        unsafe_allow_html=True,
+                    )
                     if st.button(f"Use Skeleton {label}", key=f"use_skeleton_{label}"):
                         st.session_state.chosen_skeleton = edited_skeletons[label]
                         st.session_state.outlines = None
@@ -573,13 +586,14 @@ if st.session_state.mode == "article":
                         st.rerun()
 
                 if st.session_state.chosen_skeleton:
-                    st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose item structure</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose what appears inside each list-item section</div>", unsafe_allow_html=True)
+                    st.caption("These are content elements inside every item H2 (for example, inside “Scikit-learn”). You choose whole sections to draft in Step 4 after expansion.")
                     options = skeletons.get("structure_options", [])
                     option_ids = [option["id"] for option in options]
                     selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
                     preset = next(option for option in options if option["id"] == selected_option)
                     components = st.multiselect(
-                        "Components for every list item", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
+                        "Elements inside every list-item H2 — not sections to draft", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
                         default=preset["components"], key="listicle_components"
                     )
                     if "heading" not in components:
@@ -685,7 +699,7 @@ if st.session_state.mode == "article":
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<span class='step-badge'>4</span><span class='syne' style='font-size:1rem;font-weight:700;'>Draft Sections</span>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick which sections to preview first.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick complete H2 sections to draft—intro, guidance sections, or whole items such as Scikit-learn.</div>", unsafe_allow_html=True)
 
                     structural_to_draft = st.multiselect(
                         "Structural sections to draft", structural_headings,
