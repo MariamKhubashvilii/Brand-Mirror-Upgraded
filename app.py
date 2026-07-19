@@ -1,8 +1,10 @@
+import re
 import streamlit as st
 import openai
 import anthropic
 import json
 from scraper import scrape_url
+from extraction import build_competitor_context
 from llm import (
     research_competitors, score_existing_article, generate_outlines,
     draft_sections, generate_final_article,
@@ -131,7 +133,19 @@ init_state({
     "lp_research": None,
     # scrape pastes
     "comp_pastes": ["","",""],
+    "lp_comp_pastes": ["", ""],
 })
+
+
+def is_usable_paste(text: str, min_words: int = 100) -> bool:
+    if not text or not text.strip():
+        return False
+    return len(re.findall(r"\b\w+\b", text)) >= min_words
+
+
+def build_research_payload(results, client, brand_knowledge):
+    usable = [r for r in results if r.get("text")]
+    return build_competitor_context(usable, client, brand_knowledge)
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -215,8 +229,9 @@ if st.session_state.mode == "article":
             usable = [r for r in st.session_state.comp_results if r.get("text")]
             if usable:
                 with st.spinner("Running deep research..."):
+                    compressed = build_research_payload(usable, get_client(), st.session_state.brand_knowledge)
                     st.session_state.research = research_competitors(
-                        get_client(), st.session_state.keyword, usable, st.session_state.brand_knowledge
+                        get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                     )
                     st.session_state.outlines = None
                     st.session_state.drafted = None
@@ -252,13 +267,18 @@ if st.session_state.mode == "article":
                 if st.button("Re-run Research with Pasted Content", type="primary", key="rerun_research"):
                     for i, r in enumerate(st.session_state.comp_results):
                         if not r["success"] and i < len(st.session_state.comp_pastes) and st.session_state.comp_pastes[i].strip():
-                            st.session_state.comp_results[i]["text"] = st.session_state.comp_pastes[i]
-                            st.session_state.comp_results[i]["success"] = True
+                            paste_text = st.session_state.comp_pastes[i].strip()
+                            if is_usable_paste(paste_text):
+                                st.session_state.comp_results[i]["text"] = paste_text
+                                st.session_state.comp_results[i]["success"] = True
+                            else:
+                                st.session_state.comp_results[i]["error"] = "Pasted text is too short. Add at least 100 words."
                     usable = [r for r in st.session_state.comp_results if r.get("text")]
                     if usable:
                         with st.spinner("Running deep research with pasted content..."):
+                            compressed = build_research_payload(usable, get_client(), st.session_state.brand_knowledge)
                             st.session_state.research = research_competitors(
-                                get_client(), st.session_state.keyword, usable, st.session_state.brand_knowledge
+                                get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                             )
                             st.session_state.outlines = None
                             st.session_state.drafted = None
@@ -298,6 +318,17 @@ if st.session_state.mode == "article":
                     own = scrape_url(st.session_state.own_url)
                 if not own["success"]:
                     st.error(f"Could not scrape your page: {own['error']}")
+                    pasted = st.text_area("Paste your article content here", value="", height=180, placeholder="Paste at least 100 words of article text...")
+                    if pasted.strip() and is_usable_paste(pasted):
+                        with st.spinner("Scoring against SOPs..."):
+                            result = score_existing_article(
+                                get_client(), pasted, st.session_state.keyword,
+                                st.session_state.brand_knowledge, st.session_state.directive_outline
+                            )
+                            st.session_state.existing_score = result
+                            st.session_state.confirmed_suggestions = {}
+                    elif pasted.strip():
+                        st.warning("That pasted content is too short. Add at least 100 words before scoring.")
                 else:
                     with st.spinner("Scoring against SOPs..."):
                         result = score_existing_article(
@@ -525,7 +556,12 @@ else:
             result = scrape_url(st.session_state.lp_url)
         if not result["success"]:
             st.error(f"Could not scrape page: {result['error']}")
-        else:
+            pasted = st.text_area("Paste your landing page content here", value="", height=180, placeholder="Paste at least 100 words of page content...")
+            if pasted.strip() and is_usable_paste(pasted):
+                result = {"success": True, "text": pasted, "sections": [], "title": st.session_state.lp_url}
+            elif pasted.strip():
+                st.warning("That pasted content is too short. Add at least 100 words before analyzing.")
+        if result.get("success"):
             st.session_state.lp_result = result
             comp_urls = [u.strip() for u in st.session_state.comp_urls[:2] if u.strip()]
             comp_texts = []
@@ -535,10 +571,17 @@ else:
                         cr = scrape_url(u)
                         if cr["success"]:
                             comp_texts.append(cr)
+                        else:
+                            idx = comp_urls.index(u)
+                            paste = st.text_area(f"Paste competitor content for {u}", value=st.session_state.lp_comp_pastes[idx], height=120, key=f"lp_comp_paste_{idx}")
+                            st.session_state.lp_comp_pastes[idx] = paste
+                            if is_usable_paste(paste):
+                                comp_texts.append({"url": u, "text": paste, "title": u, "sections": []})
             if comp_texts:
                 with st.spinner("Running competitor research..."):
+                    compressed = build_research_payload(comp_texts, get_client(), st.session_state.brand_knowledge)
                     st.session_state.lp_research = research_competitors(
-                        get_client(), st.session_state.keyword, comp_texts, st.session_state.brand_knowledge
+                        get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                     )
             with st.spinner("Detecting page sections..."):
                 st.session_state.lp_sections = analyze_landing_page_sections(
