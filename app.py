@@ -130,7 +130,7 @@ init_state({
     "research": None, "existing_score": None,
     "existing_suggestions": [], "confirmed_suggestions": {},
     "outlines": None, "chosen_outline": None, "skeletons": None, "chosen_skeleton": None,
-    "selection_confirmation": "",
+    "selection_confirmation": "", "skeleton_version": 0,
     "drafted": None, "user_edits": {},
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
@@ -486,7 +486,7 @@ if st.session_state.mode == "article":
         else:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<span class='step-badge'>3</span><span class='syne' style='font-size:1rem;font-weight:700;'>Generate Outlines</span>", unsafe_allow_html=True)
-            if st.session_state.selection_confirmation:
+            if st.session_state.selection_confirmation and st.session_state.article_type != "listicle":
                 st.success(st.session_state.selection_confirmation)
                 st.session_state.selection_confirmation = ""
             st.session_state.directive_outline = st.text_input(
@@ -505,6 +505,7 @@ if st.session_state.mode == "article":
                         )
                         st.session_state.outlines = None
                         st.session_state.chosen_skeleton = None
+                        st.session_state.skeleton_version += 1
                     else:
                         st.session_state.outlines = generate_outlines(
                             get_client(), st.session_state.keyword,
@@ -567,6 +568,7 @@ if st.session_state.mode == "article":
                         st.session_state.chosen_skeleton = edited_skeletons[label]
                         st.session_state.outlines = None
                         st.session_state.chosen_outline = None
+                        st.session_state.skeleton_version += 1
                         st.session_state.selection_confirmation = f"Skeleton {label} selected. Choose the H2 sections and item components to expand next."
                         st.rerun()
 
@@ -588,7 +590,12 @@ if st.session_state.mode == "article":
                         st.session_state.chosen_skeleton = None
                         st.session_state.outlines = None
                         st.session_state.chosen_outline = None
+                        st.session_state.skeleton_version += 1
                         st.rerun()
+
+                if st.session_state.selection_confirmation:
+                    st.success(st.session_state.selection_confirmation)
+                    st.session_state.selection_confirmation = ""
 
                 if st.session_state.chosen_skeleton:
                     st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose what appears inside each list-item section</div>", unsafe_allow_html=True)
@@ -602,7 +609,7 @@ if st.session_state.mode == "article":
                         "Complete H2 sections to include in the expanded outline",
                         all_skeleton_headings, default=all_skeleton_headings,
                         help="Select whole sections such as the introduction, Scikit-learn, or the conclusion. All are included by default.",
-                        key="listicle_h2s_to_expand",
+                        key=f"listicle_h2s_to_expand_{st.session_state.skeleton_version}",
                     )
                     options = skeletons.get("structure_options", [])
                     option_ids = [option["id"] for option in options]
@@ -610,7 +617,7 @@ if st.session_state.mode == "article":
                     preset = next(option for option in options if option["id"] == selected_option)
                     components = st.multiselect(
                         "Elements inside every list-item H2 — not sections to draft", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
-                        default=preset["components"], key="listicle_components"
+                        default=preset["components"], key=f"listicle_components_{st.session_state.skeleton_version}"
                     )
                     if "heading" not in components:
                         components.insert(0, "heading")
@@ -643,7 +650,7 @@ if st.session_state.mode == "article":
                 sparse_warnings = []
 
                 for label, ol in [("A", oa), ("B", ob)]:
-                    if isinstance(ol, dict) and is_listicle_now:
+                    if isinstance(ol, dict) and is_listicle_now and not ol.get("skeleton"):
                         sections = ol.get("sections") or []
                         if isinstance(sections, list) and len(sections) <= sparse_threshold:
                             sparse_warnings.append(f"Outline {label} only has {len(sections)} section(s) — well short of what a comprehensive listicle for this topic needs.")
@@ -655,8 +662,10 @@ if st.session_state.mode == "article":
                     if not ol: continue
                     chosen = st.session_state.chosen_outline == label
                     card_cls = "card accent" if chosen else "card"
+                    is_expanded_listicle = is_listicle_now and bool(ol.get("skeleton"))
+                    display_title = "Expanded Listicle" if is_expanded_listicle else f"Outline {label}"
                     st.markdown(f"<div class='{card_cls}'>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='syne' style='font-size:1rem;font-weight:700;'>Outline {label} — {ol.get('tone','')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='syne' style='font-size:1rem;font-weight:700;'>{display_title} — {ol.get('tone','')}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.8rem;'>{ol.get('tone_rationale','')}</div>", unsafe_allow_html=True)
 
                     for sec in ol.get("sections", []):
@@ -673,7 +682,7 @@ if st.session_state.mode == "article":
 </div></div>""", unsafe_allow_html=True)
 
                     st.markdown("</div>", unsafe_allow_html=True)
-                    if st.button(f"Choose Outline {label}", key=f"choose_{label}"):
+                    if not is_expanded_listicle and st.button(f"Choose Outline {label}", key=f"choose_{label}"):
                         st.session_state.chosen_outline = label
                         st.session_state.selection_confirmation = f"Outline {label} selected. Choose the complete H2 sections you want to draft in Step 4."
                         st.session_state.drafted = None
@@ -681,8 +690,9 @@ if st.session_state.mode == "article":
                         st.rerun()
 
                 st.markdown("<br>", unsafe_allow_html=True)
+                feedback_label = "Feedback on expanded listicle (optional)" if is_listicle_now else "Feedback on outlines (optional)"
                 st.session_state.outline_feedback = st.text_area(
-                    "Feedback on outlines (optional)",
+                    feedback_label,
                     value=st.session_state.outline_feedback,
                     placeholder="e.g. make outline A shorter, add a comparison section, remove the FAQ from B",
                     height=80,
@@ -723,7 +733,8 @@ if st.session_state.mode == "article":
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<span class='step-badge'>4</span><span class='syne' style='font-size:1rem;font-weight:700;'>Draft Sections</span>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick complete H2 sections to draft—intro, guidance sections, or whole items such as Scikit-learn.</div>", unsafe_allow_html=True)
+                    selected_name = "Expanded listicle" if chosen_ol.get("skeleton") else f"Outline {st.session_state.chosen_outline}"
+                    st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>{selected_name} selected. Pick complete H2 sections to draft—intro, guidance sections, or whole items such as Scikit-learn.</div>", unsafe_allow_html=True)
 
                     structural_to_draft = st.multiselect(
                         "Structural sections to draft", structural_headings,
