@@ -141,7 +141,14 @@ def research_competitors(client, keyword, competitor_texts: list[dict], brand_kn
     comps = []
     for i, c in enumerate(competitor_texts, start=1):
         if isinstance(c, dict) and isinstance(c.get("summary"), dict):
-            comps.append(f"COMPETITOR {i} ({c.get('url', 'unknown')}):\n{json.dumps(c['summary'])}")
+            summary = c["summary"]
+            outline = c.get("outline") or summary.get("outline") or []
+            intro_summary = c.get("intro_summary") or summary.get("intro_summary") or {}
+            comps.append(
+                f"COMPETITOR {i} ({c.get('url', 'unknown')}):\n"
+                f"INTRO: {json.dumps(intro_summary)}\n"
+                f"OUTLINE: {json.dumps(outline)}"
+            )
         else:
             source_text = (c.get("text") or "")[:3000]
             comps.append(f"COMPETITOR {i} ({c.get('url', 'unknown')}):\n{source_text}")

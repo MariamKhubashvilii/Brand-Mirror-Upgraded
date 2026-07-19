@@ -37,20 +37,38 @@ def scrape_url(url: str) -> dict:
 
         # Extract structured sections by headings
         sections = []
-        current = {"heading": "intro", "level": 0, "text": ""}
-        for el in soup.find_all(["h1", "h2", "h3", "h4", "p", "li", "td"]):
+        current = {"heading": "intro", "level": 0, "text": "", "format": "paragraph", "images": [], "has_code": False}
+        for el in soup.find_all(["h1", "h2", "h3", "h4", "p", "ul", "ol", "li", "table", "td", "th", "img", "pre", "code"]):
             tag = el.name
             text = el.get_text(" ", strip=True)
-            if not text:
+            if not text and tag not in ["img", "pre", "code"]:
                 continue
             if tag in ["h1", "h2", "h3", "h4"]:
-                if current["text"].strip():
+                if current.get("text", "").strip():
                     sections.append(current)
                 level = int(tag[1])
-                current = {"heading": text, "level": level, "text": ""}
+                current = {"heading": text, "level": level, "text": "", "format": "paragraph", "images": [], "has_code": False}
+            elif tag == "img":
+                alt = el.get("alt") or ""
+                src = el.get("src") or ""
+                if alt or src:
+                    current.setdefault("images", []).append(alt or src)
+                current["format"] = "mixed"
+            elif tag in ["ul", "ol"]:
+                current["format"] = "list"
+                current["text"] += " " + text
+            elif tag == "table":
+                current["format"] = "table"
+                current["text"] += " " + text
+            elif tag in ["pre", "code"]:
+                current["has_code"] = True
+                current["format"] = "mixed"
+                current["text"] += " " + text
             else:
                 current["text"] += " " + text
-        if current["text"].strip():
+                if tag in ["p", "li", "td", "th"]:
+                    current["format"] = "mixed" if current["format"] == "list" or current["format"] == "table" else "paragraph"
+        if current.get("text", "").strip():
             sections.append(current)
 
         full_text = " ".join(f"[{s['heading']}] {s['text']}" for s in sections)
