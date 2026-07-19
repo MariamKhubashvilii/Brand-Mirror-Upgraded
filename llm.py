@@ -120,13 +120,32 @@ def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str
 Follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 Return only valid JSON.
-Include as many sections as the topic genuinely needs — do not limit yourself to 2 or 3 headings.
-A thorough outline typically has 6-10 H2 sections, each with 1-3 H3 subsections where relevant.
-Base the structure entirely on the competitor research and search intent, not on any default template."""
+
+Section count is not fixed. Use as many H2 sections as the topic genuinely needs, not a target number.
+A thorough outline is often 6-10 H2 sections with 1-3 H3 subsections where relevant, but that's a typical
+range, not a ceiling. If the topic legitimately needs more, use more.
+
+Listicle handling: if the keyword is list-format (best X, top X, X vs Y vs Z, alternatives to X, etc.),
+do not cap the list at what competitors happen to cover. Research the full set of options, tools, or
+approaches that are genuinely valid for the topic, including ones no competitor mentions. Then apply a
+critical filter before including anything: drop items that don't fit the brand, are discontinued or
+outdated, or wouldn't hold up to a knowledgeable reader checking them. The goal is a list that is more
+complete and more accurate than any single competitor's, not a superset padded with weak entries.
+
+Be critical of the competitor research, not deferential to it. Where competitor articles are bloated with
+filler, tangents, or repeated points, do not mirror that bloat. For each candidate section or list item,
+judge on its own merits whether it's actually optimal for AI search visibility, SEO, and the reader, then
+keep, merge, or cut it. Competitor coverage is a signal to weigh, not a template to copy.
+
+Base the structure on the competitor research and search intent, filtered through your own editorial
+judgment, not on any default template.
+
+If a custom directive is given below, it overrides any instruction above it that it conflicts with. Treat
+it as the final word on structure, scope, section count, and list length for this outline."""
     user = f"""Keyword: {keyword}
 Brand Knowledge: {brand_knowledge}
 Research: {json.dumps(research)}
-Custom Directive for Outline stage: {directive or 'None'}
+Custom Directive for Outline stage (overrides the system instructions above wherever they conflict): {directive or 'None'}
 
 Generate two outlines. For each, suggest a distinct tone based on the research.
 Return JSON:
@@ -149,7 +168,7 @@ Return JSON:
         "from_competitor": "what we took from competitor research",
         "from_brand": "what comes from brand knowledge/voice",
         "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists",
+        "rationale": "why this section exists, and why it earned its place over anything cut",
         "word_count_target": 150,
         "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
         "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
@@ -187,7 +206,7 @@ Return JSON:
         "from_competitor": "what we took from competitor research",
         "from_brand": "what comes from brand knowledge/voice",
         "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists",
+        "rationale": "why this section exists, and why it earned its place over anything cut",
         "word_count_target": 150,
         "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
         "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
@@ -219,37 +238,13 @@ def draft_sections(client, claude_client, keyword: str, outline: dict, selected_
 Follow these SOPs: {SOPS}
 Follow these AI visibility principles: {AI_VISIBILITY_GUIDE}
 
-VOICE EXAMPLES - match this tone and style exactly:
-
----
-You have decided to learn data science. Now you are staring at two names that keep coming up: DataCamp and Coursera. Both teach data skills. Both have Python courses. Both have thousands of students. So which one is actually worth your time?
-
-The honest answer is it depends on how you learn. This guide breaks down what each platform does well, where they fall short, and who they are actually built for.
----
-DataCamp puts you in the code from day one. There are no long video lectures to sit through. You read a short explanation, then write actual code in the browser to move forward. That is the whole model.
-
-It works well if you learn by doing. It works less well if you like understanding the theory before you touch anything.
----
-DataCamp runs on a subscription, around $25/month if you pay annually. That gets you access to everything. Coursera works differently. Individual courses are free to audit, but certificates cost money, usually $49 per course or $59/month for Coursera Plus.
-
-If you want one platform and a clear learning path, DataCamp is simpler. If you want to pick specific courses or earn university-backed certificates, Coursera makes more sense.
----
-
-NEVER do this:
-- Bold random phrases mid-sentence
-- Use em dashes. Use a comma or a period instead.
-- Use words like: significantly, comprehensive, leverage, dive deep, innovative, seamless, robust, transformative, cutting-edge, powerful, elevate, unlock
-- Start sentences with "When selecting", "It is important to", "In conclusion", "In today's"
-- State the obvious
-- Repeat the same idea in different words
-
 Return only valid JSON."""
     user = f"""Keyword: {keyword}
 Tone: {outline['tone']}
 Brand Knowledge: {brand_knowledge}
 Research Summary: {json.dumps(research_summary)}
 
-Custom Directive for Drafting stage: {directive or 'None'}
+Custom Directive for Drafting stage (overrides the SOPs above wherever they conflict): {directive or 'None'}
 
 Sections to write:
 {json.dumps(sel_sections)}
