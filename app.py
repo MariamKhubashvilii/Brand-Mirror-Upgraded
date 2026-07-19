@@ -602,18 +602,8 @@ if st.session_state.mode == "article":
 
                 if st.session_state.chosen_skeleton:
                     st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose what appears inside each list-item section</div>", unsafe_allow_html=True)
-                    st.caption("Choose the complete H2 sections to expand below, then choose the content elements inside each selected list-item H2.")
+                    st.caption("These elements are applied inside every list-item H2. The complete skeleton stays intact; in Step 4 you choose which whole H2 sections to draft as writing samples.")
                     approved_skeleton = st.session_state.chosen_skeleton
-                    pre_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("pre_list", []) if isinstance(entry, dict)]
-                    list_headings = [entry.get("name", "Untitled item") for entry in approved_skeleton.get("the_list", []) if isinstance(entry, dict)]
-                    post_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("post_list", []) if isinstance(entry, dict)]
-                    all_skeleton_headings = pre_headings + list_headings + post_headings
-                    selected_h2s = st.multiselect(
-                        "Complete H2 sections to include in the expanded outline",
-                        all_skeleton_headings, default=all_skeleton_headings,
-                        help="Select whole sections such as the introduction, Scikit-learn, or the conclusion. All are included by default.",
-                        key=f"listicle_h2s_to_expand_{st.session_state.skeleton_version}",
-                    )
                     options = skeletons.get("structure_options", [])
                     option_ids = [option["id"] for option in options]
                     selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
@@ -624,16 +614,10 @@ if st.session_state.mode == "article":
                     )
                     if "heading" not in components:
                         components.insert(0, "heading")
-                    if st.button("Expand Approved Skeleton", type="primary", disabled=not (st.session_state.api_key and selected_h2s)):
-                        selected_skeleton = dict(
-                            approved_skeleton,
-                            pre_list=[entry for entry in approved_skeleton.get("pre_list", []) if isinstance(entry, dict) and entry.get("heading") in selected_h2s],
-                            the_list=[entry for entry in approved_skeleton.get("the_list", []) if isinstance(entry, dict) and entry.get("name") in selected_h2s],
-                            post_list=[entry for entry in approved_skeleton.get("post_list", []) if isinstance(entry, dict) and entry.get("heading") in selected_h2s],
-                        )
+                    if st.button("Prepare Draft Samples", type="primary", disabled=not st.session_state.api_key):
                         with st.spinner("Expanding the approved skeleton..."):
                             expanded = expand_outline(
-                                get_client(), st.session_state.keyword, selected_skeleton,
+                                get_client(), st.session_state.keyword, approved_skeleton,
                                 components, st.session_state.research, st.session_state.brand_knowledge,
                                 st.session_state.directive_outline,
                             )
