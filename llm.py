@@ -16,6 +16,36 @@ from model_config import DEFAULT_JSON_MODEL, DEFAULT_PROSE_MODEL
 from sops import SOPS, AI_VISIBILITY_GUIDE
 from verification import compliance_report
 
+# ── Article type classification ─────────────────────────────────────────────
+ARTICLE_TYPES = ["listicle", "comparison", "tutorial/how-to", "guide/informational", "review", "other"]
+
+ARTICLE_TYPE_DESCRIPTIONS = {
+    "listicle": "A list of distinct items/options/tools/libraries/products under one topic (e.g. 'Best X', 'Top X for Y', 'X libraries for Y', 'Alternatives to X').",
+    "comparison": "A head-to-head comparison of two or more named alternatives (e.g. 'X vs Y').",
+    "tutorial/how-to": "Step-by-step instructional content teaching a specific process or skill.",
+    "guide/informational": "Broad explanatory or conceptual content not centered on a list or a head-to-head comparison.",
+    "review": "An evaluation of a single product, service, or tool.",
+    "other": "Doesn't clearly fit the above.",
+}
+
+
+def _estimate_competitor_list_items(competitor_texts: list[dict]) -> int:
+    """Heuristic: estimate how many list items (e.g. libraries, tools, products) the
+    largest competitor covers, based on numbered headings or H3 subheading counts."""
+    counts = []
+    for c in competitor_texts:
+        outline = []
+        if isinstance(c, dict):
+            outline = c.get("outline") or (c.get("summary") or {}).get("outline") or []
+        numbered = [o for o in outline if re.match(r"^\s*\d+[\.\)]", str(o.get("heading", "")))]
+        if numbered:
+            counts.append(len(numbered))
+            continue
+        h3s = [o for o in outline if o.get("level") == 3]
+        if h3s:
+            counts.append(len(h3s))
+    return max(counts) if counts else 0
+
 
 def chat(client, system, user, temperature=0.5, max_tokens=4000, model: Optional[str] = None):
     if not client:
@@ -158,14 +188,24 @@ def _looks_like_listicle_topic(keyword: str, directive: str = "") -> bool:
     return False
 
 
-def _needs_retry_for_sparse_outline(outlines: dict, keyword: str, directive: str = "") -> bool:
+def _min_listicle_items(research: dict) -> int:
+    competitor_max = (research or {}).get("max_competitor_list_items", 0) or 0
+    return max(competitor_max + 2, 22)
+
+
+def _needs_retry_for_sparse_outline(outlines: dict, keyword: str, directive: str = "", research: dict = None, effective_type: str = None) -> bool:
     if not isinstance(outlines, dict):
         return False
-    if not _looks_like_listicle_topic(keyword, directive):
+    is_listicle = effective_type == "listicle" or _looks_like_listicle_topic(keyword, directive)
+    if not is_listicle:
         return False
+    threshold = 2
+    if research is not None:
+        # Aim to catch outlines that fall well short of the computed minimum, not just near-empty ones.
+        threshold = max(2, _min_listicle_items(research) // 2)
     for key in ("outline_a", "outline_b"):
         sections = outlines.get(key, {}).get("sections") or []
-        if isinstance(sections, list) and len(sections) <= 2:
+        if isinstance(sections, list) and len(sections) <= threshold:
             return True
     return False
 
@@ -234,6 +274,11 @@ def research_competitors(client, keyword, competitor_texts: list[dict], brand_kn
     system = f"""You are a senior SEO strategist. Analyze competitor content and produce a structured research report.
 Use these AI visibility principles: {AI_VISIBILITY_GUIDE}
 {_build_guardrail_prompt()}
+
+You must also classify the article type. Choose exactly one from this list, based on the keyword and
+how competitors have structured their content:
+{json.dumps(ARTICLE_TYPE_DESCRIPTIONS, indent=2)}
+
 Return only valid JSON."""
     user = f"""Keyword: {keyword}
 Relevant Brand Context: {relevant_brand_context}
@@ -253,13 +298,18 @@ Return JSON with this structure:
   "ai_visibility_recommendations": ["rec1", "rec2", ...],
   "competitor_weaknesses": ["weakness1", "weakness2", ...],
   "recommended_word_count": 1200,
-  "schema_types": ["FAQ", "HowTo", "..."]
+  "schema_types": ["FAQ", "HowTo", "..."],
+  "detected_article_type": "one of: listicle, comparison, tutorial/how-to, guide/informational, review, other",
+  "article_type_rationale": "one sentence explaining why this type fits"
 }}"""
     payload = chat_json(client, system, user)
     payload["entity_frequency_table"] = frequency_table
     payload["underused_but_important"] = underused
     payload["source_count"] = len(competitor_texts)
     payload["source_urls"] = [c.get("url") or c.get("title") or "unknown" for c in competitor_texts]
+    if payload.get("detected_article_type") not in ARTICLE_TYPES:
+        payload["detected_article_type"] = "other"
+    payload["max_competitor_list_items"] = _estimate_competitor_list_items(competitor_texts)
     return payload
 
 # ── Article: score existing ──────────────────────────────────────────────────
@@ -305,14 +355,39 @@ Return JSON:
     return chat_json(client, system, user)
 
 # ── Article: generate two outlines ──────────────────────────────────────────
-def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str, directive: str = "") -> dict:
+def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str, directive: str = "", article_type: str = None) -> dict:
     relevant_brand_context = select_relevant_context(keyword, brand_knowledge)
-    listicle_mode = _looks_like_listicle_topic(keyword, directive)
+    effective_type = article_type or (research or {}).get("detected_article_type") or "other"
+    if effective_type not in ARTICLE_TYPES:
+        effective_type = "listicle" if _looks_like_listicle_topic(keyword, directive) else "other"
+    is_listicle = effective_type == "listicle" or _looks_like_listicle_topic(keyword, directive)
+
+    type_specific_block = ""
+    if is_listicle:
+        min_items = _min_listicle_items(research)
+        competitor_max = (research or {}).get("max_competitor_list_items", 0) or 0
+        type_specific_block = f"""
+
+LISTICLE-SPECIFIC REQUIREMENTS — this overrides the general section-count guidance above wherever they conflict:
+- The largest competitor covers roughly {competitor_max or 'an unclear number of'} list items (libraries, tools, products, options, etc. — whatever the keyword's list is of).
+- Your outline must include AT LEAST {min_items} distinct items, each as its own H2 section using the standard section schema. Never group multiple items into one section, and never bury an item inside another section's key_points — one item, one H2.
+- First, evaluate every item any competitor includes. Keep it only if it is genuinely relevant, current, and not discontinued, off-topic, or a weak filler entry.
+- Then research and add additional genuinely relevant items competitors missed, continuing until you reach or exceed the minimum count above using only high-quality, relevant entries. Do not pad with irrelevant or low-quality items just to hit the number. If you genuinely cannot find enough relevant items to reach the minimum, include as many as are truly valid and say so plainly in tone_rationale — do not silently fall short without explanation.
+- Structure the outline in this order:
+  1. One intro H2 (why this topic/list matters, how the list is organized).
+  2. Optionally, one orientation H2 *before* the list starts if it helps the reader use the list well (e.g. how to evaluate/choose between the items, or the categories the list is organized by). Only include this if it's genuinely useful, not as filler.
+  3. One H2 per list item (the bulk of the outline), grouped into logical categories if that aids skimmability.
+  4. After the list, one or more H2 sections covering angles that matter for this keyword but aren't list items themselves — anything that improves completeness or reader UX (e.g. how the items work together, common pitfalls, integration notes, decision guidance). Include as many of these as are genuinely useful, not just one for the sake of it.
+  5. A final "Final Thoughts" / conclusion H2.
+"""
+
     system = f"""You are a senior content strategist. Generate two distinct article outlines with different tones.
 Follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 {_build_guardrail_prompt()}
 Return only valid JSON.
+
+Detected article type for this piece: {effective_type}
 
 Section count is not fixed. Use as many H2 sections as the topic genuinely needs, not a target number.
 A thorough outline is often 6-10 H2 sections with 1-3 H3 subsections where relevant, but that's a typical
@@ -322,9 +397,7 @@ Listicle handling: if the keyword or directive suggests a set of items, tools, o
 platforms, resources, or alternatives, treat it as a comprehensive list topic. Do not cap the list at what
 competitors happen to cover. Research the full set of valid options and make each substantial item its own
 H2 section. Do not compress several items into one section or bury them inside a single key_points list.
-If the topic is list/comparison/comprehensive, the outline should usually have one H2 section per major item
-or cluster of closely related items, plus any intro/FAQ/CTA/conclusion sections needed.
-
+{type_specific_block}
 If the custom directive asks to include more items, more libraries/tools/options, or to exceed competitor
 coverage, each additional item must become its own H2 section following the existing section schema — do not
 compress multiple items into the key_points or content_brief of a single section.
@@ -430,15 +503,12 @@ Return JSON:
     ]
   }}
 }}"""
-    try:
-        outlines = chat_json(client, system, user, max_tokens=12000)
-    except Exception:
-        outlines = chat_json(client, system, user, max_tokens=12000)
+    outlines = chat_json(client, system, user, max_tokens=12000)
 
     if not isinstance(outlines, dict):
         raise ValueError("Outline generation returned invalid JSON")
 
-    if _needs_retry_for_sparse_outline(outlines, keyword, directive):
+    if _needs_retry_for_sparse_outline(outlines, keyword, directive, research=research, effective_type=effective_type):
         retry_system = f"""{system}
 
 IMPORTANT: The previous response was too sparse for a comprehensive list/comparison topic. Return a much more detailed outline with many H2 sections. Each major item, tool, library, app, or option should receive its own H2 section. Do not compress multiple items into one section. Keep the section payload compact but ensure full coverage."""
@@ -451,6 +521,7 @@ The previous answer was too sparse for this topic. Expand the outline substantia
         raise ValueError("Outline generation returned invalid JSON")
 
     return outlines
+
 
 # ── Article: draft selected sections ────────────────────────────────────────
 def draft_sections(client, claude_client, keyword: str, outline: dict, selected_headings: list[str],

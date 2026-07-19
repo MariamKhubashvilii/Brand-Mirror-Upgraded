@@ -14,7 +14,7 @@ from llm import (
     research_competitors, score_existing_article, generate_outlines,
     draft_sections, generate_final_article,
     analyze_landing_page_sections, generate_lp_suggestions,
-    _looks_like_listicle_topic
+    _looks_like_listicle_topic, _min_listicle_items, ARTICLE_TYPES
 )
 from source_flow import build_competitor_results, finalize_competitor_results
 
@@ -133,6 +133,7 @@ init_state({
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
     "outline_feedback": "",
+    "article_type": "",
     # landing page
     "lp_url": "", "lp_result": None,
     "lp_sections": None, "lp_selected": [],
@@ -356,6 +357,27 @@ if st.session_state.mode == "article":
                 for item in underused:
                     st.markdown(f"- **{item.get('term', '')}** ({item.get('coverage', '')}): {item.get('why', '')}")
 
+        # ── Article type (auto-detected, editable) ──────────────────────────
+        st.markdown("<br>", unsafe_allow_html=True)
+        detected_type = r.get('detected_article_type', 'other')
+        if detected_type not in ARTICLE_TYPES:
+            detected_type = 'other'
+        if not st.session_state.article_type or st.session_state.article_type not in ARTICLE_TYPES:
+            st.session_state.article_type = detected_type
+        type_col1, type_col2 = st.columns([1, 2], gap="medium")
+        with type_col1:
+            st.session_state.article_type = st.selectbox(
+                "Article Type",
+                ARTICLE_TYPES,
+                index=ARTICLE_TYPES.index(st.session_state.article_type),
+                key="article_type_select",
+                help="Auto-detected from competitor research. Change it if it's wrong — this affects how outlines are structured (e.g. listicles get one H2 per item)."
+            )
+        with type_col2:
+            rationale = r.get('article_type_rationale', '')
+            if rationale:
+                st.markdown(f"<div style='font-size:0.78rem;color:#888;padding-top:1.9rem;'>Auto-detected as <b>{detected_type}</b>: {rationale}</div>", unsafe_allow_html=True)
+
         # ── STEP 3A: Update existing article ───────────────────────────────
         if st.session_state.own_url.strip():
             st.markdown("<br>", unsafe_allow_html=True)
@@ -458,7 +480,8 @@ if st.session_state.mode == "article":
                     st.session_state.outlines = generate_outlines(
                         get_client(), st.session_state.keyword,
                         st.session_state.research, st.session_state.brand_knowledge,
-                        st.session_state.directive_outline
+                        st.session_state.directive_outline,
+                        article_type=st.session_state.article_type
                     )
                     st.session_state.chosen_outline = None
                     st.session_state.drafted = None
@@ -468,16 +491,18 @@ if st.session_state.mode == "article":
                 outlines = st.session_state.outlines
                 oa, ob = outlines.get("outline_a"), outlines.get("outline_b")
                 directive_for_warning = st.session_state.directive_outline or st.session_state.outline_feedback or ""
+                is_listicle_now = st.session_state.article_type == "listicle" or _looks_like_listicle_topic(st.session_state.keyword, directive_for_warning)
+                sparse_threshold = max(2, _min_listicle_items(st.session_state.research) // 2) if is_listicle_now else 2
                 sparse_warnings = []
 
                 for label, ol in [("A", oa), ("B", ob)]:
-                    if isinstance(ol, dict) and _looks_like_listicle_topic(st.session_state.keyword, directive_for_warning):
+                    if isinstance(ol, dict) and is_listicle_now:
                         sections = ol.get("sections") or []
-                        if isinstance(sections, list) and len(sections) <= 2:
-                            sparse_warnings.append(f"Outline {label} still has only {len(sections)} section(s).")
+                        if isinstance(sections, list) and len(sections) <= sparse_threshold:
+                            sparse_warnings.append(f"Outline {label} only has {len(sections)} section(s) — well short of what a comprehensive listicle for this topic needs.")
 
                 if sparse_warnings:
-                    st.warning("The topic looks comprehensive, but the outline is still too sparse. Consider adding more H2 sections for the item list.")
+                    st.warning(" ".join(sparse_warnings) + " Try clicking Regenerate, or add a directive like 'give each item its own H2 section, minimum 20+ sections.'")
 
                 for label, ol in [("A", oa), ("B", ob)]:
                     if not ol: continue
@@ -523,7 +548,8 @@ if st.session_state.mode == "article":
                         st.session_state.outlines = generate_outlines(
                             get_client(), st.session_state.keyword,
                             st.session_state.research, st.session_state.brand_knowledge,
-                            directive=st.session_state.outline_feedback
+                            directive=st.session_state.outline_feedback,
+                            article_type=st.session_state.article_type
                         )
                         st.session_state.chosen_outline = None
                         st.session_state.drafted = None
