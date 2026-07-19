@@ -130,6 +130,7 @@ init_state({
     "research": None, "existing_score": None,
     "existing_suggestions": [], "confirmed_suggestions": {},
     "outlines": None, "chosen_outline": None, "skeletons": None, "chosen_skeleton": None,
+    "selection_confirmation": "",
     "drafted": None, "user_edits": {},
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
@@ -485,6 +486,9 @@ if st.session_state.mode == "article":
         else:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<span class='step-badge'>3</span><span class='syne' style='font-size:1rem;font-weight:700;'>Generate Outlines</span>", unsafe_allow_html=True)
+            if st.session_state.selection_confirmation:
+                st.success(st.session_state.selection_confirmation)
+                st.session_state.selection_confirmation = ""
             st.session_state.directive_outline = st.text_input(
                 "Outline directive (optional)", value=st.session_state.directive_outline,
                 placeholder="e.g. keep both outlines very beginner-friendly",
@@ -563,6 +567,7 @@ if st.session_state.mode == "article":
                         st.session_state.chosen_skeleton = edited_skeletons[label]
                         st.session_state.outlines = None
                         st.session_state.chosen_outline = None
+                        st.session_state.selection_confirmation = f"Skeleton {label} selected. Choose the H2 sections and item components to expand next."
                         st.rerun()
 
                 st.session_state.skeleton_feedback = st.text_area(
@@ -587,7 +592,18 @@ if st.session_state.mode == "article":
 
                 if st.session_state.chosen_skeleton:
                     st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose what appears inside each list-item section</div>", unsafe_allow_html=True)
-                    st.caption("These are content elements inside every item H2 (for example, inside “Scikit-learn”). You choose whole sections to draft in Step 4 after expansion.")
+                    st.caption("Choose the complete H2 sections to expand below, then choose the content elements inside each selected list-item H2.")
+                    approved_skeleton = st.session_state.chosen_skeleton
+                    pre_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("pre_list", []) if isinstance(entry, dict)]
+                    list_headings = [entry.get("name", "Untitled item") for entry in approved_skeleton.get("the_list", []) if isinstance(entry, dict)]
+                    post_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("post_list", []) if isinstance(entry, dict)]
+                    all_skeleton_headings = pre_headings + list_headings + post_headings
+                    selected_h2s = st.multiselect(
+                        "Complete H2 sections to include in the expanded outline",
+                        all_skeleton_headings, default=all_skeleton_headings,
+                        help="Select whole sections such as the introduction, Scikit-learn, or the conclusion. All are included by default.",
+                        key="listicle_h2s_to_expand",
+                    )
                     options = skeletons.get("structure_options", [])
                     option_ids = [option["id"] for option in options]
                     selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
@@ -598,15 +614,22 @@ if st.session_state.mode == "article":
                     )
                     if "heading" not in components:
                         components.insert(0, "heading")
-                    if st.button("Expand Approved Skeleton", type="primary", disabled=not st.session_state.api_key):
+                    if st.button("Expand Approved Skeleton", type="primary", disabled=not (st.session_state.api_key and selected_h2s)):
+                        selected_skeleton = dict(
+                            approved_skeleton,
+                            pre_list=[entry for entry in approved_skeleton.get("pre_list", []) if isinstance(entry, dict) and entry.get("heading") in selected_h2s],
+                            the_list=[entry for entry in approved_skeleton.get("the_list", []) if isinstance(entry, dict) and entry.get("name") in selected_h2s],
+                            post_list=[entry for entry in approved_skeleton.get("post_list", []) if isinstance(entry, dict) and entry.get("heading") in selected_h2s],
+                        )
                         with st.spinner("Expanding the approved skeleton..."):
                             expanded = expand_outline(
-                                get_client(), st.session_state.keyword, st.session_state.chosen_skeleton,
+                                get_client(), st.session_state.keyword, selected_skeleton,
                                 components, st.session_state.research, st.session_state.brand_knowledge,
                                 st.session_state.directive_outline,
                             )
                             st.session_state.outlines = {"outline_a": expanded}
                             st.session_state.chosen_outline = "A"
+                            st.session_state.selection_confirmation = "Your selected listicle outline has been expanded and is ready to draft."
                             st.session_state.drafted = None
                             st.session_state.final_article = ""
                             st.rerun()
@@ -652,6 +675,7 @@ if st.session_state.mode == "article":
                     st.markdown("</div>", unsafe_allow_html=True)
                     if st.button(f"Choose Outline {label}", key=f"choose_{label}"):
                         st.session_state.chosen_outline = label
+                        st.session_state.selection_confirmation = f"Outline {label} selected. Choose the complete H2 sections you want to draft in Step 4."
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
                         st.rerun()
