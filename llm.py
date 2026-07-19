@@ -193,23 +193,6 @@ def _min_listicle_items(research: dict) -> int:
     return max(competitor_max + 2, 22)
 
 
-def _needs_retry_for_sparse_outline(outlines: dict, keyword: str, directive: str = "", research: dict = None, effective_type: str = None) -> bool:
-    if not isinstance(outlines, dict):
-        return False
-    is_listicle = effective_type == "listicle" or _looks_like_listicle_topic(keyword, directive)
-    if not is_listicle:
-        return False
-    threshold = 2
-    if research is not None:
-        # Aim to catch outlines that fall well short of the computed minimum, not just near-empty ones.
-        threshold = max(2, _min_listicle_items(research) // 2)
-    for key in ("outline_a", "outline_b"):
-        sections = outlines.get(key, {}).get("sections") or []
-        if isinstance(sections, list) and len(sections) <= threshold:
-            return True
-    return False
-
-
 def _apply_compliance_loop(text: str, rules: Dict[str, Any], *, keyword: str, tone: str, brand_context: str, directive: str, writer_fn, client, claude_client, max_tokens: int = 4000) -> tuple[str, Dict[str, Any]]:
     draft = text
     report = compliance_report(draft, rules)
@@ -355,6 +338,19 @@ Return JSON:
     return chat_json(client, system, user)
 
 # ── Article: generate two outlines ──────────────────────────────────────────
+def _outline_sections_are_sparse(outline: dict, keyword: str, directive: str = "", research: dict = None, effective_type: str = None) -> bool:
+    if not isinstance(outline, dict):
+        return False
+    is_listicle = effective_type == "listicle" or _looks_like_listicle_topic(keyword, directive)
+    if not is_listicle:
+        return False
+    threshold = 2
+    if research is not None:
+        threshold = max(2, _min_listicle_items(research) // 2)
+    sections = outline.get("sections") or []
+    return isinstance(sections, list) and len(sections) <= threshold
+
+
 def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str, directive: str = "", article_type: str = None) -> dict:
     relevant_brand_context = select_relevant_context(keyword, brand_knowledge)
     effective_type = article_type or (research or {}).get("detected_article_type") or "other"
@@ -363,6 +359,7 @@ def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str
     is_listicle = effective_type == "listicle" or _looks_like_listicle_topic(keyword, directive)
 
     type_specific_block = ""
+    section_schema_block = ""
     if is_listicle:
         min_items = _min_listicle_items(research)
         competitor_max = (research or {}).get("max_competitor_list_items", 0) or 0
@@ -370,7 +367,7 @@ def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str
 
 LISTICLE-SPECIFIC REQUIREMENTS — this overrides the general section-count guidance above wherever they conflict:
 - The largest competitor covers roughly {competitor_max or 'an unclear number of'} list items (libraries, tools, products, options, etc. — whatever the keyword's list is of).
-- Your outline must include AT LEAST {min_items} distinct items, each as its own H2 section using the standard section schema. Never group multiple items into one section, and never bury an item inside another section's key_points — one item, one H2.
+- Your outline must include AT LEAST {min_items} distinct items, each as its own H2 section. Never group multiple items into one section, and never bury an item inside another section's key_points — one item, one H2.
 - First, evaluate every item any competitor includes. Keep it only if it is genuinely relevant, current, and not discontinued, off-topic, or a weak filler entry.
 - Then research and add additional genuinely relevant items competitors missed, continuing until you reach or exceed the minimum count above using only high-quality, relevant entries. Do not pad with irrelevant or low-quality items just to hit the number. If you genuinely cannot find enough relevant items to reach the minimum, include as many as are truly valid and say so plainly in tone_rationale — do not silently fall short without explanation.
 - Structure the outline in this order:
@@ -379,9 +376,35 @@ LISTICLE-SPECIFIC REQUIREMENTS — this overrides the general section-count guid
   3. One H2 per list item (the bulk of the outline), grouped into logical categories if that aids skimmability.
   4. After the list, one or more H2 sections covering angles that matter for this keyword but aren't list items themselves — anything that improves completeness or reader UX (e.g. how the items work together, common pitfalls, integration notes, decision guidance). Include as many of these as are genuinely useful, not just one for the sake of it.
   5. A final "Final Thoughts" / conclusion H2.
-"""
 
-    system = f"""You are a senior content strategist. Generate two distinct article outlines with different tones.
+CRITICAL — TWO DIFFERENT SECTION SHAPES: with {min_items}+ items, using the full detailed section schema for
+every single item makes the response too large to fit and forces you to silently cut the item count short.
+To prevent that, use TWO different shapes for "sections" entries:
+- "structural" sections (intro, orientation, post-list, conclusion — usually only 3-6 of these total) use the
+  FULL schema shown below, with all fields.
+- "listitem" sections (one per item in the list — the bulk of the outline) use the COMPACT schema instead:
+  {{
+    "heading": "the item's name",
+    "level": "H2",
+    "type": "listitem",
+    "format": "paragraph | table | image+text | code+text | mixed — pick whichever best fits how this item should be presented",
+    "content_brief": "2-3 sentences: what it is, why it belongs in this list, and the one or two things worth calling out about it",
+    "key_points": ["short point 1", "short point 2", "short point 3"],
+    "keywords_to_use": ["kw1", "kw2"],
+    "rationale": "under 15 words on why this made the cut"
+  }}
+  Do NOT include entities, from_competitor, from_brand, ai_visibility_note, example_sentences, or
+  h3_subsections on listitem sections — leave those fields out entirely for items to keep the response
+  compact enough to cover all {min_items}+ items. Save the full schema's richness for the handful of
+  structural sections, where it's cheap because there are only a few of them.
+"""
+        section_schema_block = """
+NOTE: for this listicle, "sections" will contain a MIX of "structural" (full schema) and "listitem" (compact
+schema, described above) entries. Use the full schema below only for structural sections. Use the compact
+listitem schema for every list item — do not use the full schema for items, or you will run out of room
+before covering enough items."""
+
+    system = f"""You are a senior content strategist. Generate one article outline.
 Follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
 {_build_guardrail_prompt()}
@@ -399,8 +422,8 @@ competitors happen to cover. Research the full set of valid options and make eac
 H2 section. Do not compress several items into one section or bury them inside a single key_points list.
 {type_specific_block}
 If the custom directive asks to include more items, more libraries/tools/options, or to exceed competitor
-coverage, each additional item must become its own H2 section following the existing section schema — do not
-compress multiple items into the key_points or content_brief of a single section.
+coverage, each additional item must become its own H2 section — do not compress multiple items into the
+key_points or content_brief of a single section.
 
 Be critical of the competitor research, not deferential to it. Where competitor articles are bloated with
 filler, tangents, or repeated points, do not mirror that bloat. For each candidate section or list item,
@@ -416,111 +439,96 @@ it as the final word on structure, scope, section count, and list length for thi
 If this is a list/comparison/comprehensive topic, prioritize breadth and coverage over brevity, and make sure
 the outline contains enough H2 sections to cover the full set of distinct items rather than a single summary
 section.
+{section_schema_block}
 """
-    user = f"""Keyword: {keyword}
+
+    def build_user(variant_label: str, contrast_note: str = "") -> str:
+        return f"""Keyword: {keyword}
 Relevant Brand Context: {relevant_brand_context}
 Research: {json.dumps(research)}
 Custom Directive for Outline stage (overrides the system instructions above wherever they conflict): {directive or 'None'}
 
-Generate two outlines. For each, suggest a distinct tone based on the research.
-If the topic is list/comparison/comprehensive, make sure each major item or tool has its own H2 section, not a bullet list inside one section.
+Generate ONE outline — "Outline {variant_label}". Suggest a tone based on the research.{contrast_note}
+If the topic is list/comparison/comprehensive, make sure each major item or tool has its own H2 section, not a bullet list inside one section.{' Use the compact listitem schema for items and the full schema only for structural sections, as instructed above.' if is_listicle else ''}
 Return JSON:
 {{
-  "outline_a": {{
-    "tone": "string",
-    "tone_rationale": "why this tone fits based on research",
-    "target_word_count": 1400,
-    "sections": [
-      {{
-        "heading": "string",
-        "level": "H2",
-        "type": "intro|body|faq|cta|conclusion",
-        "key_points": ["point1", "point2", "point3", "point4", "point5"],
-        "keywords_to_use": [
-          {{"keyword": "kw1", "source": "competitor 1 — used in their H2", "why": "high frequency, matches search intent"}},
-          {{"keyword": "kw2", "source": "competitor 2 — found in body copy", "why": "LSI term, adds semantic coverage"}}
-        ],
-        "entities": ["specific brands, tools, studies, stats, or names to mention"],
-        "from_competitor": "what we took from competitor research",
-        "from_brand": "what comes from brand knowledge/voice",
-        "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists, and why it earned its place over anything cut",
-        "word_count_target": 150,
-        "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
-        "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
-        "h3_subsections": [
-          {{
-            "heading": "string",
-            "key_points": ["point1", "point2", "point3"],
-            "keywords_to_use": [
-              {{"keyword": "kw1", "source": "competitor 1 — used in meta", "why": "directly relevant to subtopic"}},
-              {{"keyword": "kw2", "source": "brand knowledge", "why": "aligns with brand USP"}}
-            ],
-            "entities": ["specific entities for this subsection"],
-            "content_brief": "what this subsection covers",
-            "word_count_target": 80
-          }}
-        ]
-      }}
-    ]
-  }},
-  "outline_b": {{
-    "tone": "string",
-    "tone_rationale": "why this tone fits based on research",
-    "target_word_count": 1400,
-    "sections": [
-      {{
-        "heading": "string",
-        "level": "H2",
-        "type": "intro|body|faq|cta|conclusion",
-        "key_points": ["point1", "point2", "point3", "point4", "point5"],
-        "keywords_to_use": [
-          {{"keyword": "kw1", "source": "competitor 1 — used in their H2", "why": "high frequency, matches search intent"}},
-          {{"keyword": "kw2", "source": "competitor 2 — found in body copy", "why": "LSI term, adds semantic coverage"}}
-        ],
-        "entities": ["specific brands, tools, studies, stats, or names to mention"],
-        "from_competitor": "what we took from competitor research",
-        "from_brand": "what comes from brand knowledge/voice",
-        "ai_visibility_note": "specific AI visibility tactic for this section",
-        "rationale": "why this section exists, and why it earned its place over anything cut",
-        "word_count_target": 150,
-        "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
-        "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
-        "h3_subsections": [
-          {{
-            "heading": "string",
-            "key_points": ["point1", "point2", "point3"],
-            "keywords_to_use": [
-              {{"keyword": "kw1", "source": "competitor 1 — used in meta", "why": "directly relevant to subtopic"}},
-              {{"keyword": "kw2", "source": "brand knowledge", "why": "aligns with brand USP"}}
-            ],
-            "entities": ["specific entities for this subsection"],
-            "content_brief": "what this subsection covers",
-            "word_count_target": 80
-          }}
-        ]
-      }}
-    ]
-  }}
+  "tone": "string",
+  "tone_rationale": "why this tone fits based on research",
+  "target_word_count": 1400,
+  "sections": [
+    {{
+      "heading": "string",
+      "level": "H2",
+      "type": "intro|body|faq|cta|conclusion",
+      "key_points": ["point1", "point2", "point3", "point4", "point5"],
+      "keywords_to_use": [
+        {{"keyword": "kw1", "source": "competitor 1 — used in their H2", "why": "high frequency, matches search intent"}},
+        {{"keyword": "kw2", "source": "competitor 2 — found in body copy", "why": "LSI term, adds semantic coverage"}}
+      ],
+      "entities": ["specific brands, tools, studies, stats, or names to mention"],
+      "from_competitor": "what we took from competitor research",
+      "from_brand": "what comes from brand knowledge/voice",
+      "ai_visibility_note": "specific AI visibility tactic for this section",
+      "rationale": "why this section exists, and why it earned its place over anything cut",
+      "word_count_target": 150,
+      "content_brief": "2-3 sentences describing exactly what this section should say and feel like — written so a human writer can follow it without guessing",
+      "example_sentences": ["An actual example sentence in the brand voice", "Another one if needed"],
+      "h3_subsections": [
+        {{
+          "heading": "string",
+          "key_points": ["point1", "point2", "point3"],
+          "keywords_to_use": [
+            {{"keyword": "kw1", "source": "competitor 1 — used in meta", "why": "directly relevant to subtopic"}},
+            {{"keyword": "kw2", "source": "brand knowledge", "why": "aligns with brand USP"}}
+          ],
+          "entities": ["specific entities for this subsection"],
+          "content_brief": "what this subsection covers",
+          "word_count_target": 80
+        }}
+      ]
+    }}
+    // ^ this full schema is for STRUCTURAL sections only (intro, orientation, post-list, conclusion).
+    // For listitem sections in a listicle, use the compact schema instead:
+    // {{"heading": "...", "level": "H2", "type": "listitem", "format": "...", "content_brief": "...", "key_points": [...], "keywords_to_use": [...], "rationale": "..."}}
+  ]
 }}"""
-    outlines = chat_json(client, system, user, max_tokens=12000)
 
-    if not isinstance(outlines, dict):
-        raise ValueError("Outline generation returned invalid JSON")
+    # gpt-4o-mini has a hard 16384-token output ceiling — requesting more than that raises an API error
+    # instead of yielding a longer response, so neither budget below may exceed it. Each outline now gets
+    # its own call and its own full budget, instead of splitting one budget across both outlines.
+    base_tokens = 16000 if is_listicle else 8000
+    retry_tokens = 16384 if is_listicle else 10000
 
-    if _needs_retry_for_sparse_outline(outlines, keyword, directive, research=research, effective_type=effective_type):
-        retry_system = f"""{system}
+    def generate_one(variant_label: str, contrast_note: str = "") -> dict:
+        user = build_user(variant_label, contrast_note)
+        outline = chat_json(client, system, user, max_tokens=base_tokens)
+        if not isinstance(outline, dict):
+            raise ValueError(f"Outline {variant_label} generation returned invalid JSON")
 
-IMPORTANT: The previous response was too sparse for a comprehensive list/comparison topic. Return a much more detailed outline with many H2 sections. Each major item, tool, library, app, or option should receive its own H2 section. Do not compress multiple items into one section. Keep the section payload compact but ensure full coverage."""
-        retry_user = f"""{user}
+        if _outline_sections_are_sparse(outline, keyword, directive, research=research, effective_type=effective_type):
+            retry_system = f"""{system}
 
-The previous answer was too sparse for this topic. Expand the outline substantially. Make each significant item its own H2 section, and keep the rest of the structure compact. Do not produce only one or two sections."""
-        outlines = chat_json(client, retry_system, retry_user, max_tokens=14000)
+IMPORTANT: The previous response was too sparse for a comprehensive list/comparison topic. Return a much more detailed outline with many H2 sections. Each major item, tool, library, app, or option should receive its own H2 section, using the compact listitem schema described above — do NOT use the full schema for items, that is what caused the previous response to fall short. Do not compress multiple items into one section."""
+            retry_user = f"""{user}
 
-    if not isinstance(outlines, dict):
-        raise ValueError("Outline generation returned invalid JSON")
+The previous answer was too sparse for this topic. Expand the outline substantially. Make each significant item its own H2 section using the compact listitem schema (heading, level, type, format, content_brief, key_points, keywords_to_use, rationale only — no entities, from_competitor, from_brand, ai_visibility_note, example_sentences, or h3_subsections on items). Reserve the full schema only for structural sections. Do not produce only a handful of sections."""
+            outline = chat_json(client, retry_system, retry_user, max_tokens=retry_tokens)
+            if not isinstance(outline, dict):
+                raise ValueError(f"Outline {variant_label} retry returned invalid JSON")
+        return outline
 
-    return outlines
+    outline_a = generate_one("A")
+    tone_a = outline_a.get("tone", "")
+    tone_a_rationale = outline_a.get("tone_rationale", "")
+    contrast_note = (
+        f" Outline B must use a genuinely different tone and structural emphasis than Outline A, which used "
+        f"tone '{tone_a}' ({tone_a_rationale}). Do not reuse or lightly reword that tone — pick a distinct angle."
+        if tone_a else ""
+    )
+    outline_b = generate_one("B", contrast_note)
+
+    return {"outline_a": outline_a, "outline_b": outline_b}
+
 
 
 # ── Article: draft selected sections ────────────────────────────────────────
