@@ -50,7 +50,9 @@ Return only valid JSON with fields:
       "has_code": false,
       "notes": "one sentence"
     }}
-  ]
+  ],
+  "entities": ["entity 1", "entity 2"],
+  "attributes": ["attribute 1", "attribute 2"]
 }}
 
 Brand knowledge: {brand_knowledge}
@@ -79,6 +81,8 @@ Sections:
         parsed = {
             "intro_summary": parsed.get("intro_summary") or {"topics_mentioned": [], "keywords_used": [], "tone": "neutral"},
             "outline": outline,
+            "entities": parsed.get("entities") or [],
+            "attributes": parsed.get("attributes") or [],
         }
 
     _CACHE[cache_key] = parsed
@@ -97,6 +101,8 @@ def build_competitor_context(competitor_texts: list[dict], client: Any, brand_kn
             "title": item.get("title") or url,
             "intro_summary": summary.get("intro_summary") if isinstance(summary, dict) else None,
             "outline": summary.get("outline") if isinstance(summary, dict) else [],
+            "entities": summary.get("entities") if isinstance(summary, dict) else [],
+            "attributes": summary.get("attributes") if isinstance(summary, dict) else [],
             "summary": summary,
             "raw_text": (item.get("text") or "")[:2000],
         })

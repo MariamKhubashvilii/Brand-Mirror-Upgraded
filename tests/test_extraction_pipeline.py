@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from extraction import build_competitor_context
+from llm import build_entity_frequency_table
 
 
 class FakeResponse:
@@ -51,3 +52,17 @@ def test_build_competitor_context_preserves_section_structure():
     assert context[0]["outline"][0]["images"] == ["price chart"]
     assert context[0]["outline"][0]["has_code"] is False
     assert context[0]["intro_summary"]["tone"] == "direct"
+
+
+def test_build_entity_frequency_table_counts_terms_exactly():
+    competitors = [
+        {"url": "https://one.com", "raw_text": "NumPy is fast and beginner-friendly. NumPy is used widely.", "entities": ["NumPy"], "attributes": ["beginner-friendly", "fast"]},
+        {"url": "https://two.com", "raw_text": "NumPy is lightweight and scalable.", "entities": ["NumPy"], "attributes": ["lightweight", "scalable"]},
+    ]
+
+    table = build_entity_frequency_table(competitors)
+
+    assert table["NumPy"]["total_mentions"] == 3
+    assert table["NumPy"]["coverage"] == "2/2"
+    assert table["beginner-friendly"]["total_mentions"] == 1
+    assert table["beginner-friendly"]["coverage"] == "1/2"

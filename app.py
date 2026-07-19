@@ -5,6 +5,11 @@ import anthropic
 import json
 from scraper import scrape_url
 from extraction import build_competitor_context
+
+try:
+    import pandas as pd
+except ImportError:  # pragma: no cover - optional dependency
+    pd = None
 from llm import (
     research_competitors, score_existing_article, generate_outlines,
     draft_sections, generate_final_article,
@@ -301,6 +306,30 @@ if st.session_state.mode == "article":
         with rc3:
             st.markdown(f"<div class='card'><div class='lbl'>AI Visibility Recs</div>{''.join(f'<div style=\"font-size:0.8rem;color:#5a7a00;padding:0.15rem 0;\">✦ {a}</div>' for a in r.get('ai_visibility_recommendations',[]))}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='card'><div class='lbl'>Recommended Schema</div>{''.join(f'<span class=\"tag green\">{s}</span>' for s in r.get('schema_types',[]))}</div>", unsafe_allow_html=True)
+
+        entity_rows = []
+        for term, data in r.get('entity_frequency_table', {}).items():
+            entity_rows.append({
+                'entity/attribute': term,
+                'total_mentions': data.get('total_mentions', 0),
+                'coverage': data.get('coverage', '0/0'),
+                'per_competitor': ', '.join(f'{k}: {v}' for k, v in sorted(data.get('per_competitor', {}).items()))
+            })
+        if entity_rows:
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("Entity / attribute frequency matrix"):
+                if pd is not None:
+                    st.dataframe(pd.DataFrame(entity_rows), use_container_width=True, hide_index=True)
+                else:
+                    for row in entity_rows:
+                        st.write(row)
+
+        underused = r.get('underused_but_important', [])
+        if underused:
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("Underused but important"):
+                for item in underused:
+                    st.markdown(f"- **{item.get('term', '')}** ({item.get('coverage', '')}): {item.get('why', '')}")
 
         # ── STEP 3A: Update existing article ───────────────────────────────
         if st.session_state.own_url.strip():

@@ -90,6 +90,55 @@ def select_relevant_context(topic: str, brand_knowledge: str, sop_text: str = SO
     return "\n".join(dict.fromkeys(relevant_lines))
 
 
+def build_entity_frequency_table(competitors: List[dict]) -> Dict[str, dict]:
+    terms = []
+    for competitor in competitors:
+        summary = competitor.get("summary") if isinstance(competitor.get("summary"), dict) else {}
+        terms.extend(competitor.get("entities") or summary.get("entities") or [])
+        terms.extend(competitor.get("attributes") or summary.get("attributes") or [])
+    unique_terms = sorted({term.strip() for term in terms if term and str(term).strip()}, key=str.lower)
+    total_competitors = len(competitors)
+    rows: Dict[str, dict] = {}
+    for term in unique_terms:
+        per_competitor = {}
+        total_mentions = 0
+        coverage = 0
+        pattern = re.compile(r"(?<!\w)" + re.escape(term) + r"(?!\w)", re.IGNORECASE)
+        for competitor in competitors:
+            raw_text = competitor.get("raw_text") or competitor.get("text") or ""
+            count = len(pattern.findall(raw_text))
+            per_competitor[competitor.get("url") or "competitor"] = count
+            total_mentions += count
+            if count > 0:
+                coverage += 1
+        rows[term] = {
+            "total_mentions": total_mentions,
+            "per_competitor": per_competitor,
+            "coverage": f"{coverage}/{total_competitors}",
+        }
+    return dict(sorted(rows.items(), key=lambda item: (-item[1]["total_mentions"], item[0].lower())))
+
+
+def judge_underused_terms(keyword: str, frequency_table: Dict[str, dict], client=None) -> List[dict]:
+    if not client:
+        return []
+    compact_table = []
+    for term, values in frequency_table.items():
+        compact_table.append({
+            "term": term,
+            "total_mentions": values.get("total_mentions", 0),
+            "coverage": values.get("coverage", "0/0"),
+        })
+    system = "You are a careful SEO analyst. Flag terms that are underused by competitors but important to the topic. Return only valid JSON."
+    user = f"""Keyword/topic: {keyword}
+Frequency table (term, total_mentions, coverage):
+{json.dumps(compact_table[:80])}
+
+Pick a short list of terms where coverage is low but the term is conceptually central to the topic based on general knowledge of the space. Explain briefly why each is important."""
+    payload = chat_json(client, system, user, max_tokens=2500)
+    return payload.get("underused_but_important", [])
+
+
 def _build_guardrail_prompt() -> str:
     return "Use only the provided text and sources. If something is not covered by the source content, say 'not enough information in the source content' rather than inventing details."
 
@@ -153,6 +202,8 @@ def research_competitors(client, keyword, competitor_texts: list[dict], brand_kn
             source_text = (c.get("text") or "")[:3000]
             comps.append(f"COMPETITOR {i} ({c.get('url', 'unknown')}):\n{source_text}")
     competitor_payload = "\n\n".join(comps)
+    frequency_table = build_entity_frequency_table(competitor_texts)
+    underused = judge_underused_terms(keyword, frequency_table, client)
     system = f"""You are a senior SEO strategist. Analyze competitor content and produce a structured research report.
 Use these AI visibility principles: {AI_VISIBILITY_GUIDE}
 {_build_guardrail_prompt()}
