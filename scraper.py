@@ -38,10 +38,10 @@ def scrape_url(url: str) -> dict:
         # Extract structured sections by headings
         sections = []
         current = {"heading": "intro", "level": 0, "text": "", "format": "paragraph", "images": [], "has_code": False}
-        for el in soup.find_all(["h1", "h2", "h3", "h4", "p", "ul", "ol", "li", "table", "td", "th", "img", "pre", "code"]):
+        for el in soup.find_all(["h1", "h2", "h3", "h4", "p", "ul", "ol", "table", "img", "pre"]):
             tag = el.name
             text = el.get_text(" ", strip=True)
-            if not text and tag not in ["img", "pre", "code"]:
+            if not text and tag not in ["img", "pre"]:
                 continue
             if tag in ["h1", "h2", "h3", "h4"]:
                 if current.get("text", "").strip():
@@ -60,14 +60,14 @@ def scrape_url(url: str) -> dict:
             elif tag == "table":
                 current["format"] = "table"
                 current["text"] += " " + text
-            elif tag in ["pre", "code"]:
+            elif tag == "pre":
                 current["has_code"] = True
                 current["format"] = "mixed"
                 current["text"] += " " + text
             else:
                 current["text"] += " " + text
-                if tag in ["p", "li", "td", "th"]:
-                    current["format"] = "mixed" if current["format"] == "list" or current["format"] == "table" else "paragraph"
+                if tag == "p":
+                    current["format"] = "paragraph"
         if current.get("text", "").strip():
             sections.append(current)
 
