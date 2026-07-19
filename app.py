@@ -138,7 +138,7 @@ init_state({
     "lp_research": None,
     # scrape pastes
     "comp_pastes": ["","",""],
-    "comp_html_pastes": ["","","],
+    "comp_html_pastes": ["", "", ""],
     "own_html_paste": "",
     "lp_comp_pastes": ["", ""],
     "lp_comp_html_pastes": ["", ""],
@@ -326,13 +326,18 @@ if st.session_state.mode == "article":
         rc1, rc2, rc3 = st.columns(3, gap="medium")
         with rc1:
             st.markdown(f"<div class='card'><div class='lbl'>Search Intent</div><div style='font-size:0.85rem;color:#333;'>{r.get('search_intent','')}</div></div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card'><div class='lbl'>Content Gaps</div>{''.join(f'<div style=\"font-size:0.82rem;color:#333;padding:0.2rem 0;\">→ {g}</div>' for g in r.get('content_gaps',[]))}</div>", unsafe_allow_html=True)
+            gaps_html = ''.join(f'<div style="font-size:0.82rem;color:#333;padding:0.2rem 0;">→ {g}</div>' for g in r.get('content_gaps', []))
+            st.markdown(f"<div class='card'><div class='lbl'>Content Gaps</div>{gaps_html}</div>", unsafe_allow_html=True)
         with rc2:
-            st.markdown(f"<div class='card'><div class='lbl'>LSI Keywords</div>{''.join(f'<span class=\"tag\">{k}</span>' for k in r.get('lsi_keywords',[]))}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card'><div class='lbl'>Questions to Answer</div>{''.join(f'<div style=\"font-size:0.82rem;color:#333;padding:0.15rem 0;\">• {q}</div>' for q in r.get('questions_to_answer',[]))}</div>", unsafe_allow_html=True)
+            lsi_html = ''.join(f'<span class="tag">{k}</span>' for k in r.get('lsi_keywords', []))
+            st.markdown(f"<div class='card'><div class='lbl'>LSI Keywords</div>{lsi_html}</div>", unsafe_allow_html=True)
+            questions_html = ''.join(f'<div style="font-size:0.82rem;color:#333;padding:0.15rem 0;">• {q}</div>' for q in r.get('questions_to_answer', []))
+            st.markdown(f"<div class='card'><div class='lbl'>Questions to Answer</div>{questions_html}</div>", unsafe_allow_html=True)
         with rc3:
-            st.markdown(f"<div class='card'><div class='lbl'>AI Visibility Recs</div>{''.join(f'<div style=\"font-size:0.8rem;color:#5a7a00;padding:0.15rem 0;\">✦ {a}</div>' for a in r.get('ai_visibility_recommendations',[]))}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card'><div class='lbl'>Recommended Schema</div>{''.join(f'<span class=\"tag green\">{s}</span>' for s in r.get('schema_types',[]))}</div>", unsafe_allow_html=True)
+            ai_visibility_html = ''.join(f'<div style="font-size:0.8rem;color:#5a7a00;padding:0.15rem 0;">✦ {a}</div>' for a in r.get('ai_visibility_recommendations', []))
+            st.markdown(f"<div class='card'><div class='lbl'>AI Visibility Recs</div>{ai_visibility_html}</div>", unsafe_allow_html=True)
+            schema_html = ''.join(f'<span class="tag green">{s}</span>' for s in r.get('schema_types', []))
+            st.markdown(f"<div class='card'><div class='lbl'>Recommended Schema</div>{schema_html}</div>", unsafe_allow_html=True)
 
         entity_rows = []
         for term, data in r.get('entity_frequency_table', {}).items():
