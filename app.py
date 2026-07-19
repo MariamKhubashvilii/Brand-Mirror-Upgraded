@@ -15,6 +15,7 @@ from llm import (
     draft_sections, generate_final_article,
     analyze_landing_page_sections, generate_lp_suggestions
 )
+from source_flow import build_competitor_results, finalize_competitor_results
 
 st.set_page_config(page_title="SEO Writer", page_icon="✍️", layout="wide")
 
@@ -222,40 +223,38 @@ if st.session_state.mode == "article":
         if not urls:
             st.warning("Add at least one competitor URL.")
         else:
-            results = []
-            failed = []
             with st.spinner("Scraping competitor pages..."):
-                for i, url in enumerate(urls):
-                    html_paste = st.session_state.comp_html_pastes[i].strip() if i < len(st.session_state.comp_html_pastes) else ""
-                    if html_paste:
-                        r = parse_pasted_html(html_paste, label=url)
-                        r["url"] = url
-                    else:
-                        r = scrape_url(url)
-                    results.append(r)
-                    if not r["success"]:
-                        failed.append(r)
-            st.session_state.comp_results = results
+                st.session_state.comp_results = build_competitor_results(
+                    st.session_state.comp_urls,
+                    st.session_state.comp_html_pastes,
+                    scrape_url,
+                    parse_pasted_html,
+                )
 
+            failed = [r for r in st.session_state.comp_results if not r.get("success")]
             if failed:
                 st.markdown("---")
-                st.markdown("<div class='lbl' style='color:#cc4400;'>Could not open these pages — paste content manually below</div>", unsafe_allow_html=True)
-                for f in failed:
-                    st.markdown(f"<div class='card warn'>⚠ <b>{f['url']}</b><br><span style='color:#888;font-size:0.8rem;'>{f['error']}</span></div>", unsafe_allow_html=True)
-                    idx = [r["url"] for r in results].index(f["url"])
+                st.markdown("<div class='lbl' style='color:#cc4400;'>Some competitors still need content. Paste content for the failed ones below, then run research once all sources are finalized.</div>", unsafe_allow_html=True)
+                for r in failed:
+                    idx = r.get("slot_index", 0)
+                    st.markdown(f"<div class='card warn'>⚠ <b>{r['url']}</b><br><span style='color:#888;font-size:0.8rem;'>{r['error']}</span></div>", unsafe_allow_html=True)
                     st.session_state.comp_pastes[idx] = st.text_area(
-                        f"Paste content for {f['url']}",
+                        f"Paste content for {r['url']}",
                         value=st.session_state.comp_pastes[idx],
                         height=150, key=f"paste_{idx}",
                         label_visibility="collapsed",
                         placeholder="Paste the page text here..."
                     )
 
-            # Merge pastes into failed results
-            for i, r in enumerate(st.session_state.comp_results):
-                if not r["success"] and st.session_state.comp_pastes[i].strip():
-                    st.session_state.comp_results[i]["text"] = st.session_state.comp_pastes[i]
-                    st.session_state.comp_results[i]["success"] = True
+            finalized_results, excluded = finalize_competitor_results(
+                st.session_state.comp_results,
+                st.session_state.comp_pastes,
+                is_usable_paste,
+            )
+            st.session_state.comp_results = finalized_results
+
+            if excluded:
+                st.warning("Research will exclude these competitors because they still have no usable content: " + ", ".join(item["url"] for item in excluded))
 
             if st.session_state.comp_results:
                 with st.spinner("Running deep research..."):
@@ -267,52 +266,53 @@ if st.session_state.mode == "article":
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
                 st.success("Research complete.")
+            else:
+                st.error("No competitor sources were usable for research.")
 
     # ── Show failed pastes persistently and allow re-run ─────────────────
     if st.session_state.comp_results:
-        failed_after = [r for r in st.session_state.comp_results if not r["success"]]
-        if failed_after:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<div class='card warn'>", unsafe_allow_html=True)
-            st.markdown("<div class='lbl' style='color:#cc4400;'>These pages could not be scraped. Paste their content below, then re-run research.</div>", unsafe_allow_html=True)
-            for r in failed_after:
-                idx = st.session_state.comp_results.index(r)
-                st.markdown(f"<div style='font-size:0.8rem;color:#cc4400;margin:0.4rem 0 0.3rem;'>&#9888; {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
-                paste = st.text_area(
-                    f"Paste for {r['url']}",
-                    value=st.session_state.comp_pastes[idx],
-                    height=140,
-                    key=f"paste_show_{idx}",
-                    label_visibility="collapsed",
-                    placeholder="Paste the page text here..."
-                )
-                st.session_state.comp_pastes[idx] = paste
-            st.markdown("</div>", unsafe_allow_html=True)
+            failed_after = [r for r in st.session_state.comp_results if not r.get("success")]
+            if failed_after:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("<div class='card warn'>", unsafe_allow_html=True)
+                st.markdown("<div class='lbl' style='color:#cc4400;'>These pages could not be scraped. Paste their content below, then re-run research.</div>", unsafe_allow_html=True)
+                for r in failed_after:
+                    idx = r.get("slot_index", 0)
+                    st.markdown(f"<div style='font-size:0.8rem;color:#cc4400;margin:0.4rem 0 0.3rem;'>&#9888; {r['url']} — {r['error']}</div>", unsafe_allow_html=True)
+                    paste = st.text_area(
+                        f"Paste for {r['url']}",
+                        value=st.session_state.comp_pastes[idx],
+                        height=140,
+                        key=f"paste_{idx}",
+                        label_visibility="collapsed",
+                        placeholder="Paste the page text here..."
+                    )
+                    st.session_state.comp_pastes[idx] = paste
+                st.markdown("</div>", unsafe_allow_html=True)
 
-            any_paste_filled = any(
-                st.session_state.comp_pastes[st.session_state.comp_results.index(r)].strip()
-                for r in failed_after
-            )
-            if any_paste_filled:
-                if st.button("Re-run Research with Pasted Content", type="primary", key="rerun_research"):
-                    for i, r in enumerate(st.session_state.comp_results):
-                        if not r["success"] and i < len(st.session_state.comp_pastes) and st.session_state.comp_pastes[i].strip():
-                            paste_text = st.session_state.comp_pastes[i].strip()
-                            if is_usable_paste(paste_text):
-                                st.session_state.comp_results[i]["text"] = paste_text
-                                st.session_state.comp_results[i]["success"] = True
-                            else:
-                                st.session_state.comp_results[i]["error"] = "Pasted text is too short. Add at least 100 words."
-                    if st.session_state.comp_results:
-                        with st.spinner("Running deep research with pasted content..."):
-                            compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
-                            st.session_state.research = research_competitors(
-                                get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
-                            )
-                            st.session_state.outlines = None
-                            st.session_state.drafted = None
-                            st.session_state.final_article = ""
-                        st.success("Research complete.")
+                any_paste_filled = any(
+                    st.session_state.comp_pastes[r.get("slot_index", 0)].strip()
+                    for r in failed_after
+                )
+                if any_paste_filled:
+                    if st.button("Re-run Research with Pasted Content", type="primary", key="rerun_research"):
+                        finalized_results, excluded = finalize_competitor_results(
+                            st.session_state.comp_results,
+                            st.session_state.comp_pastes,
+                            is_usable_paste,
+                        )
+                        st.session_state.comp_results = finalized_results
+                        if excluded:
+                            st.warning("Research will exclude these competitors because they still have no usable content: " + ", ".join(item["url"] for item in excluded))
+                        if st.session_state.comp_results:
+                            with st.spinner("Running deep research with pasted content..."):
+                                compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
+                                st.session_state.research = research_competitors(
+                                    get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
+                                )
+                                st.session_state.outlines = None
+                                st.session_state.drafted = None
+                                st.session_state.final_article = ""
                         st.rerun()
 
     # ── STEP 2: Research display ────────────────────────────────────────────
@@ -651,25 +651,27 @@ else:
                 st.warning("That pasted content is too short. Add at least 100 words before analyzing.")
         if result.get("success"):
             st.session_state.lp_result = result
-            comp_urls = [u.strip() for u in st.session_state.comp_urls[:2] if u.strip()]
+            comp_urls = st.session_state.comp_urls[:2]
             comp_texts = []
             if comp_urls:
                 with st.spinner("Scraping competitor pages for context..."):
-                    for i, u in enumerate(comp_urls):
-                        html_paste = st.session_state.lp_comp_html_pastes[i].strip() if i < len(st.session_state.lp_comp_html_pastes) else ""
+                    for slot_index, u in enumerate(comp_urls):
+                        if not u.strip():
+                            continue
+                        html_paste = st.session_state.lp_comp_html_pastes[slot_index].strip() if slot_index < len(st.session_state.lp_comp_html_pastes) else ""
                         if html_paste:
                             cr = parse_pasted_html(html_paste, label=u)
                             cr["url"] = u
                         else:
                             cr = scrape_url(u)
                         if cr["success"]:
+                            cr["slot_index"] = slot_index
                             comp_texts.append(cr)
                         else:
-                            idx = i
-                            paste = st.text_area(f"Paste competitor content for {u}", value=st.session_state.lp_comp_pastes[idx], height=120, key=f"lp_comp_paste_{idx}")
-                            st.session_state.lp_comp_pastes[idx] = paste
+                            paste = st.text_area(f"Paste competitor content for {u}", value=st.session_state.lp_comp_pastes[slot_index], height=120, key=f"lp_comp_paste_{slot_index}")
+                            st.session_state.lp_comp_pastes[slot_index] = paste
                             if is_usable_paste(paste):
-                                comp_texts.append({"url": u, "text": paste, "title": u, "sections": []})
+                                comp_texts.append({"url": u, "text": paste, "title": u, "sections": [], "slot_index": slot_index})
             if comp_texts:
                 with st.spinner("Running competitor research..."):
                     compressed = build_research_payload(comp_texts, get_client(), st.session_state.brand_knowledge)
