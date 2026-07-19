@@ -116,8 +116,14 @@ def build_competitor_context(competitor_texts: list[dict], client: Any, brand_kn
         raw_text = item.get("text") or ""
         has_text = bool(raw_text.strip())
         if not has_sections and not has_text:
-            continue
-        summary = extract_competitor_summary(client, url, item, brand_knowledge)
+            summary = {
+                "intro_summary": {"topics_mentioned": [], "keywords_used": [], "tone": "neutral"},
+                "outline": [],
+                "entities": [],
+                "attributes": [],
+            }
+        else:
+            summary = extract_competitor_summary(client, url, item, brand_knowledge)
         summaries.append({
             "url": url,
             "title": item.get("title") or url,

@@ -85,6 +85,34 @@ def test_build_competitor_context_keeps_pasted_competitors_and_marks_outline_sou
     assert context[0]["raw_text"] == item["text"]
 
 
+def test_build_competitor_context_keeps_attempted_competitors_without_text():
+    client = FakeClient('{"intro_summary": {"topics_mentioned": [], "keywords_used": [], "tone": "neutral"}, "outline": [], "entities": [], "attributes": []}')
+    item = {"url": "https://empty.example", "title": "Empty", "text": "", "sections": []}
+
+    context = build_competitor_context([item], client, "")
+
+    assert len(context) == 1
+    assert context[0]["url"] == "https://empty.example"
+    assert context[0]["full_text"] == ""
+
+
+def test_build_competitor_context_skips_llm_when_source_is_empty():
+    class EmptyClient:
+        def __init__(self):
+            self.called = False
+
+        @property
+        def chat(self):
+            raise AssertionError("should not call LLM for empty sources")
+
+    item = {"url": "https://empty.example", "title": "Empty", "text": "", "sections": []}
+
+    context = build_competitor_context([item], EmptyClient(), "")
+
+    assert context[0]["summary"]["outline"] == []
+    assert context[0]["summary"]["intro_summary"]["tone"] == "neutral"
+
+
 def test_parse_pasted_html_handles_inspect_style_fragments():
     html = '<div class="dark-theme"><div><p>Python is popular.</p><ul><li>NumPy</li><li>Pandas</li></ul><h2>Libraries</h2><p>Great for data science.</p></div></div>'
 

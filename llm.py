@@ -231,6 +231,8 @@ Return JSON with this structure:
     payload = chat_json(client, system, user)
     payload["entity_frequency_table"] = frequency_table
     payload["underused_but_important"] = underused
+    payload["source_count"] = len(competitor_texts)
+    payload["source_urls"] = [c.get("url") or c.get("title") or "unknown" for c in competitor_texts]
     return payload
 
 # ── Article: score existing ──────────────────────────────────────────────────

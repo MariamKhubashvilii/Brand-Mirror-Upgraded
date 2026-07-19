@@ -153,8 +153,7 @@ def is_usable_paste(text: str, min_words: int = 100) -> bool:
 
 
 def build_research_payload(results, client, brand_knowledge):
-    usable = [r for r in results if r.get("text")]
-    return build_competitor_context(usable, client, brand_knowledge)
+    return build_competitor_context(results, client, brand_knowledge)
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -258,10 +257,9 @@ if st.session_state.mode == "article":
                     st.session_state.comp_results[i]["text"] = st.session_state.comp_pastes[i]
                     st.session_state.comp_results[i]["success"] = True
 
-            usable = [r for r in st.session_state.comp_results if r.get("text")]
-            if usable:
+            if st.session_state.comp_results:
                 with st.spinner("Running deep research..."):
-                    compressed = build_research_payload(usable, get_client(), st.session_state.brand_knowledge)
+                    compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
                     st.session_state.research = research_competitors(
                         get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                     )
@@ -305,10 +303,9 @@ if st.session_state.mode == "article":
                                 st.session_state.comp_results[i]["success"] = True
                             else:
                                 st.session_state.comp_results[i]["error"] = "Pasted text is too short. Add at least 100 words."
-                    usable = [r for r in st.session_state.comp_results if r.get("text")]
-                    if usable:
+                    if st.session_state.comp_results:
                         with st.spinner("Running deep research with pasted content..."):
-                            compressed = build_research_payload(usable, get_client(), st.session_state.brand_knowledge)
+                            compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
                             st.session_state.research = research_competitors(
                                 get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                             )
@@ -325,6 +322,8 @@ if st.session_state.mode == "article":
         r = st.session_state.research
         rc1, rc2, rc3 = st.columns(3, gap="medium")
         with rc1:
+            sources_html = ''.join(f'<div style="font-size:0.78rem;color:#333;padding:0.15rem 0;">• {s}</div>' for s in r.get('source_urls', []))
+            st.markdown(f"<div class='card'><div class='lbl'>Sources Analyzed</div><div style='font-size:0.85rem;color:#333;'>Total: {r.get('source_count', 0)}</div>{sources_html}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='card'><div class='lbl'>Search Intent</div><div style='font-size:0.85rem;color:#333;'>{r.get('search_intent','')}</div></div>", unsafe_allow_html=True)
             gaps_html = ''.join(f'<div style="font-size:0.82rem;color:#333;padding:0.2rem 0;">→ {g}</div>' for g in r.get('content_gaps', []))
             st.markdown(f"<div class='card'><div class='lbl'>Content Gaps</div>{gaps_html}</div>", unsafe_allow_html=True)
