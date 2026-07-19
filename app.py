@@ -11,7 +11,7 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     pd = None
 from llm import (
-    research_competitors, score_existing_article, generate_outlines,
+    research_competitors, score_existing_article, generate_outlines, generate_skeletons, expand_outline,
     draft_sections, generate_final_article,
     analyze_landing_page_sections, generate_lp_suggestions,
     _looks_like_listicle_topic, _min_listicle_items, ARTICLE_TYPES
@@ -128,7 +128,7 @@ init_state({
     "own_url": "", "comp_results": [],
     "research": None, "existing_score": None,
     "existing_suggestions": [], "confirmed_suggestions": {},
-    "outlines": None, "chosen_outline": None,
+    "outlines": None, "chosen_outline": None, "skeletons": None, "chosen_skeleton": None,
     "drafted": None, "user_edits": {},
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
@@ -258,6 +258,8 @@ if st.session_state.mode == "article":
                         get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                     )
                     st.session_state.outlines = None
+                    st.session_state.skeletons = None
+                    st.session_state.chosen_skeleton = None
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
                 st.success("Research complete.")
@@ -306,6 +308,8 @@ if st.session_state.mode == "article":
                                     get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
                                 )
                                 st.session_state.outlines = None
+                                st.session_state.skeletons = None
+                                st.session_state.chosen_skeleton = None
                                 st.session_state.drafted = None
                                 st.session_state.final_article = ""
                         st.rerun()
@@ -475,17 +479,75 @@ if st.session_state.mode == "article":
                 placeholder="e.g. keep both outlines very beginner-friendly",
                 key="dir_outline"
             )
-            if st.button("Generate 2 Outlines", disabled=not st.session_state.api_key):
-                with st.spinner("Generating outlines..."):
-                    st.session_state.outlines = generate_outlines(
-                        get_client(), st.session_state.keyword,
-                        st.session_state.research, st.session_state.brand_knowledge,
-                        st.session_state.directive_outline,
-                        article_type=st.session_state.article_type
-                    )
+            is_listicle_flow = st.session_state.article_type == "listicle"
+            generate_label = "Generate 2 List Skeletons" if is_listicle_flow else "Generate 2 Outlines"
+            if st.button(generate_label, disabled=not st.session_state.api_key):
+                with st.spinner("Generating list skeletons..." if is_listicle_flow else "Generating outlines..."):
+                    if is_listicle_flow:
+                        st.session_state.skeletons = generate_skeletons(
+                            get_client(), st.session_state.keyword, st.session_state.research,
+                            st.session_state.brand_knowledge, st.session_state.directive_outline
+                        )
+                        st.session_state.outlines = None
+                        st.session_state.chosen_skeleton = None
+                    else:
+                        st.session_state.outlines = generate_outlines(
+                            get_client(), st.session_state.keyword,
+                            st.session_state.research, st.session_state.brand_knowledge,
+                            st.session_state.directive_outline,
+                            article_type=st.session_state.article_type
+                        )
                     st.session_state.chosen_outline = None
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
+
+            # Listicles deliberately stop at a lightweight, editable skeleton before expansion.
+            if is_listicle_flow and st.session_state.skeletons:
+                st.markdown("<div class='lbl' style='margin-top:1rem;'>3A — Choose and edit a skeleton</div>", unsafe_allow_html=True)
+                skeletons = st.session_state.skeletons
+                edited_skeletons = {}
+                for label in ("A", "B"):
+                    skeleton = skeletons.get(f"skeleton_{label.lower()}", {})
+                    if not skeleton:
+                        continue
+                    st.markdown(f"<div class='card'><div class='syne' style='font-size:1rem;font-weight:700;'>Skeleton {label} — {skeleton.get('tone', '')}</div><div style='font-size:0.8rem;color:#666;'>{skeleton.get('tone_rationale', '')}</div></div>", unsafe_allow_html=True)
+                    edited = st.data_editor(
+                        skeleton.get("the_list", []), num_rows="dynamic", hide_index=True,
+                        key=f"skeleton_items_{label}", width="stretch",
+                        column_config={"name": "Item name", "why_included": "Why included", "source": "Source"},
+                    )
+                    edited_records = edited.to_dict("records") if hasattr(edited, "to_dict") else edited
+                    edited_skeletons[label] = dict(skeleton, the_list=edited_records)
+                    if st.button(f"Use Skeleton {label}", key=f"use_skeleton_{label}"):
+                        st.session_state.chosen_skeleton = edited_skeletons[label]
+                        st.session_state.outlines = None
+                        st.session_state.chosen_outline = None
+                        st.rerun()
+
+                if st.session_state.chosen_skeleton:
+                    st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose item structure</div>", unsafe_allow_html=True)
+                    options = skeletons.get("structure_options", [])
+                    option_ids = [option["id"] for option in options]
+                    selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
+                    preset = next(option for option in options if option["id"] == selected_option)
+                    components = st.multiselect(
+                        "Components for every list item", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
+                        default=preset["components"], key="listicle_components"
+                    )
+                    if "heading" not in components:
+                        components.insert(0, "heading")
+                    if st.button("Expand Approved Skeleton", type="primary", disabled=not st.session_state.api_key):
+                        with st.spinner("Expanding the approved skeleton..."):
+                            expanded = expand_outline(
+                                get_client(), st.session_state.keyword, st.session_state.chosen_skeleton,
+                                components, st.session_state.research, st.session_state.brand_knowledge,
+                                st.session_state.directive_outline,
+                            )
+                            st.session_state.outlines = {"outline_a": expanded}
+                            st.session_state.chosen_outline = "A"
+                            st.session_state.drafted = None
+                            st.session_state.final_article = ""
+                            st.rerun()
 
             if st.session_state.outlines:
                 outlines = st.session_state.outlines
@@ -543,14 +605,23 @@ if st.session_state.mode == "article":
                     height=80,
                     key="outline_fb"
                 )
-                if st.button("🔄 Regenerate Outlines", disabled=not st.session_state.api_key):
-                    with st.spinner("Regenerating outlines..."):
-                        st.session_state.outlines = generate_outlines(
-                            get_client(), st.session_state.keyword,
-                            st.session_state.research, st.session_state.brand_knowledge,
-                            directive=st.session_state.outline_feedback,
-                            article_type=st.session_state.article_type
-                        )
+                regenerate_label = "🔄 Regenerate List Skeletons" if is_listicle_flow else "🔄 Regenerate Outlines"
+                if st.button(regenerate_label, disabled=not st.session_state.api_key):
+                    with st.spinner("Regenerating list skeletons..." if is_listicle_flow else "Regenerating outlines..."):
+                        if is_listicle_flow:
+                            st.session_state.skeletons = generate_skeletons(
+                                get_client(), st.session_state.keyword, st.session_state.research,
+                                st.session_state.brand_knowledge, st.session_state.outline_feedback
+                            )
+                            st.session_state.outlines = None
+                            st.session_state.chosen_skeleton = None
+                        else:
+                            st.session_state.outlines = generate_outlines(
+                                get_client(), st.session_state.keyword,
+                                st.session_state.research, st.session_state.brand_knowledge,
+                                directive=st.session_state.outline_feedback,
+                                article_type=st.session_state.article_type
+                            )
                         st.session_state.chosen_outline = None
                         st.session_state.drafted = None
                         st.session_state.final_article = ""

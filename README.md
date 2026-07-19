@@ -13,7 +13,7 @@ A four-step pipeline for producing SEO-ready articles from scratch or improving 
 
 1. **Research** — Scrapes up to 3 competitor URLs, extracts structured content, and runs a competitor analysis using GPT-4o. Surfaces content gaps, LSI keywords, search intent, entity recommendations, and AI visibility tactics.
 2. **Score existing article** — If you have a current page, paste it in and get a detailed SOP audit with scored dimensions (conciseness, active voice, structure, skimmability, CTA presence) and prioritized fix suggestions.
-3. **Outline** — Generates two distinct outlines with different tones, each with H2 and H3 sections, keyword placement rationale, content briefs, and example sentences per section. You pick one, give feedback, and confirm.
+3. **Outline** — For listicles, generates two lightweight skeletons first, lets you edit the item list, choose a reusable item structure, then expands the approved skeleton into the full outline. Other article types continue to use two full outline variants.
 4. **Draft and final** — Claude Sonnet drafts selected sections in your brand voice. You review and edit inline. Claude then assembles the full final article in markdown, respecting your edits. Download as `.md`.
 
 ### Landing Page Optimizer
