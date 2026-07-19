@@ -1,4 +1,5 @@
 import re
+import html
 import streamlit as st
 import openai
 import anthropic
@@ -153,6 +154,21 @@ def is_usable_paste(text: str, min_words: int = 100) -> bool:
     if not text or not text.strip():
         return False
     return len(re.findall(r"\b\w+\b", text)) >= min_words
+
+
+def render_keyword_tags(keywords):
+    """Render either legacy keyword objects or compact string keyword lists."""
+    tags = []
+    for keyword in keywords or []:
+        if isinstance(keyword, dict):
+            label = keyword.get("keyword", "")
+            title = f"{keyword.get('source', '')} — {keyword.get('why', '')}".strip(" —")
+        else:
+            label, title = str(keyword), ""
+        tags.append(
+            f'<span class="tag" title="{html.escape(title)}">{html.escape(str(label))}</span>'
+        )
+    return "".join(tags)
 
 
 def build_research_payload(results, client, brand_knowledge):
@@ -608,10 +624,7 @@ if st.session_state.mode == "article":
 
                     for sec in ol.get("sections", []):
                         lvl_color = "#b8f000" if sec["level"] == "H2" else "#888"
-                        kws = "".join(
-                            f'<span class="tag" title="{k.get("source","") } — {k.get("why","")}">{k.get("keyword", k) if isinstance(k, dict) else k}</span>'
-                            for k in sec.get("keywords_to_use", [])
-                        )
+                        kws = render_keyword_tags(sec.get("keywords_to_use", []))
                         st.markdown(f"""<div style='border-left:2px solid {lvl_color};padding-left:0.8rem;margin:0.5rem 0;'>
 <div style='font-size:0.88rem;font-weight:600;color:#1a1a1a;'>{sec['heading']} <span style='color:#aaa;font-size:0.7rem;'>{sec['level']}</span></div>
 <div style='font-size:0.78rem;color:#666;margin:0.2rem 0;'>{sec.get('rationale','')}</div>
@@ -663,15 +676,27 @@ if st.session_state.mode == "article":
                 if st.session_state.chosen_outline:
                     chosen_key = f"outline_{st.session_state.chosen_outline.lower()}"
                     chosen_ol = outlines.get(chosen_key, {})
-                    all_headings = [s["heading"] for s in chosen_ol.get("sections", [])]
+                    structural_headings = [
+                        s["heading"] for s in chosen_ol.get("sections", []) if s.get("type") != "listitem"
+                    ]
+                    list_item_headings = [
+                        s["heading"] for s in chosen_ol.get("sections", []) if s.get("type") == "listitem"
+                    ]
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<span class='step-badge'>4</span><span class='syne' style='font-size:1rem;font-weight:700;'>Draft Sections</span>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.6rem;'>Outline {st.session_state.chosen_outline} selected. Pick which sections to preview first.</div>", unsafe_allow_html=True)
 
-                    selected_to_draft = st.multiselect(
-                        "Sections to draft", all_headings, default=all_headings[:2], key="sections_to_draft"
+                    structural_to_draft = st.multiselect(
+                        "Structural sections to draft", structural_headings,
+                        default=structural_headings[:2], key="structural_sections_to_draft"
                     )
+                    list_items_to_draft = st.multiselect(
+                        "List items to draft", list_item_headings,
+                        placeholder="Choose one or more items from the main list",
+                        key="list_items_to_draft"
+                    )
+                    selected_to_draft = structural_to_draft + list_items_to_draft
                     st.session_state.directive_draft = st.text_input(
                         "Draft directive (optional)", value=st.session_state.directive_draft,
                         placeholder="e.g. make the intro extra punchy, very short sentences",
