@@ -15,7 +15,10 @@ def _hash_sections(sections: list[dict]) -> str:
 
 def extract_competitor_summary(client: Any, url: str, item: dict, brand_knowledge: str = "") -> Dict[str, Any]:
     sections = item.get("sections") or []
-    cache_key = f"{url}:{_hash_sections(sections)}"
+    text = item.get("text") or ""
+    has_sections = bool(sections)
+    has_text = bool(text.strip())
+    cache_key = f"{url}:{_hash_sections(sections)}:{hashlib.sha256(text.encode('utf-8')).hexdigest()}"
     if cache_key in _CACHE:
         return _CACHE[cache_key]
 
@@ -32,8 +35,13 @@ def extract_competitor_summary(client: Any, url: str, item: dict, brand_knowledg
     if len(outline) != len(sections):
         logging.warning("Outline length mismatch for %s", url)
 
+    source_block = (
+        "Sections:\n" + json.dumps(sections, ensure_ascii=False)
+        if has_sections
+        else "Raw text:\n" + text[:12000]
+    )
     prompt = f"""You are an extraction assistant. Enrich the section outline with a short note for each section.
-Use only the provided section structure and text. If the source does not contain enough information, say 'not enough information in the source content'.
+Use only the provided source content. If structured sections are available, use them. If not, infer a best-effort outline from the raw text and default the format to "paragraph" where unclear. If the source does not contain enough information, say 'not enough information in the source content'.
 Return only valid JSON with fields:
 {{
   "intro_summary": {{
@@ -57,8 +65,7 @@ Return only valid JSON with fields:
 
 Brand knowledge: {brand_knowledge}
 
-Sections:
-{json.dumps(sections, ensure_ascii=False)}
+{source_block}
 """
 
     response = client.chat.completions.create(
@@ -73,11 +80,23 @@ Sections:
 
     if isinstance(parsed, dict):
         parsed_outline = parsed.get("outline") or []
-        if isinstance(parsed_outline, list) and len(parsed_outline) == len(outline):
-            for idx, entry in enumerate(parsed_outline):
-                outline[idx].update({
-                    "notes": entry.get("notes") or "",
-                })
+        if isinstance(parsed_outline, list):
+            if has_sections and len(parsed_outline) == len(outline):
+                for idx, entry in enumerate(parsed_outline):
+                    outline[idx].update({
+                        "notes": entry.get("notes") or "",
+                    })
+            elif not has_sections and parsed_outline:
+                outline = parsed_outline
+        elif not has_sections and has_text:
+            outline = [{
+                "level": 2,
+                "heading": "Overview",
+                "format": "paragraph",
+                "images": [],
+                "has_code": False,
+                "notes": "not enough information in the source content",
+            }]
         parsed = {
             "intro_summary": parsed.get("intro_summary") or {"topics_mentioned": [], "keywords_used": [], "tone": "neutral"},
             "outline": outline,
@@ -93,7 +112,10 @@ def build_competitor_context(competitor_texts: list[dict], client: Any, brand_kn
     summaries = []
     for item in competitor_texts:
         url = item.get("url") or ""
-        if not item.get("sections"):
+        has_sections = bool(item.get("sections"))
+        raw_text = item.get("text") or ""
+        has_text = bool(raw_text.strip())
+        if not has_sections and not has_text:
             continue
         summary = extract_competitor_summary(client, url, item, brand_knowledge)
         summaries.append({
@@ -104,6 +126,9 @@ def build_competitor_context(competitor_texts: list[dict], client: Any, brand_kn
             "entities": summary.get("entities") if isinstance(summary, dict) else [],
             "attributes": summary.get("attributes") if isinstance(summary, dict) else [],
             "summary": summary,
-            "raw_text": (item.get("text") or "")[:2000],
+            "outline_source": "structured_sections" if has_sections else "inferred_from_paste",
+            "raw_text": raw_text,
+            "raw_text_preview": raw_text[:2000],
+            "full_text": raw_text,
         })
     return summaries

@@ -68,6 +68,30 @@ def test_build_entity_frequency_table_counts_terms_exactly():
     assert table["beginner-friendly"]["coverage"] == "1/2"
 
 
+def test_build_competitor_context_keeps_pasted_competitors_and_marks_outline_source():
+    client = FakeClient('{"intro_summary": {"topics_mentioned": [], "keywords_used": [], "tone": "neutral"}, "outline": [{"level": 2, "heading": "Overview", "format": "paragraph", "images": [], "has_code": false, "notes": "Summary"}], "entities": [], "attributes": []}')
+    item = {
+        "url": "https://paste.example",
+        "title": "Paste",
+        "text": "This is pasted content with enough words to be processed for research.",
+        "sections": [],
+    }
+
+    context = build_competitor_context([item], client, "")
+
+    assert len(context) == 1
+    assert context[0]["outline_source"] == "inferred_from_paste"
+    assert context[0]["raw_text"] == item["text"]
+
+
+def test_build_entity_frequency_table_uses_full_text_when_available():
+    competitors = [{"url": "https://one.com", "full_text": "alpha " * 2500, "entities": ["alpha"]}]
+
+    table = build_entity_frequency_table(competitors)
+
+    assert table["alpha"]["total_mentions"] == 2500
+
+
 def test_research_competitors_includes_entity_frequency_matrix():
     client = FakeClient('{"search_intent": "tutorial", "content_gaps": [], "unique_angles": [], "lsi_keywords": [], "questions_to_answer": [], "ai_visibility_recommendations": [], "competitor_weaknesses": [], "recommended_word_count": 1200, "schema_types": ["FAQ"]}')
     competitors = [

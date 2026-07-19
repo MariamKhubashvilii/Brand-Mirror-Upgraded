@@ -105,7 +105,7 @@ def build_entity_frequency_table(competitors: List[dict]) -> Dict[str, dict]:
         coverage = 0
         pattern = re.compile(r"(?<!\w)" + re.escape(term) + r"(?!\w)", re.IGNORECASE)
         for competitor in competitors:
-            raw_text = competitor.get("raw_text") or competitor.get("text") or ""
+            raw_text = competitor.get("full_text") or competitor.get("raw_text") or competitor.get("text") or ""
             count = len(pattern.findall(raw_text))
             per_competitor[competitor.get("url") or "competitor"] = count
             total_mentions += count
