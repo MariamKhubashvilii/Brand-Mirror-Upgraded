@@ -238,13 +238,6 @@ if st.session_state.mode == "article":
                 for r in failed:
                     idx = r.get("slot_index", 0)
                     st.markdown(f"<div class='card warn'>⚠ <b>{r['url']}</b><br><span style='color:#888;font-size:0.8rem;'>{r['error']}</span></div>", unsafe_allow_html=True)
-                    st.session_state.comp_pastes[idx] = st.text_area(
-                        f"Paste content for {r['url']}",
-                        value=st.session_state.comp_pastes[idx],
-                        height=150, key=f"paste_{idx}",
-                        label_visibility="collapsed",
-                        placeholder="Paste the page text here..."
-                    )
 
             finalized_results, excluded = finalize_competitor_results(
                 st.session_state.comp_results,
