@@ -132,7 +132,7 @@ init_state({
     "drafted": None, "user_edits": {},
     "final_article": "",
     "directive_outline": "", "directive_draft": "", "directive_final": "",
-    "outline_feedback": "",
+    "outline_feedback": "", "skeleton_feedback": "",
     "article_type": "",
     # landing page
     "lp_url": "", "lp_result": None,
@@ -225,6 +225,14 @@ if st.session_state.mode == "article":
         if not urls:
             st.warning("Add at least one competitor URL.")
         else:
+            # A new source set invalidates any prior research immediately. If a page
+            # fails, research stays paused until the user supplies that page's text.
+            st.session_state.research = None
+            st.session_state.outlines = None
+            st.session_state.skeletons = None
+            st.session_state.chosen_skeleton = None
+            st.session_state.drafted = None
+            st.session_state.final_article = ""
             with st.spinner("Scraping competitor pages..."):
                 st.session_state.comp_results = build_competitor_results(
                     st.session_state.comp_urls,
@@ -240,18 +248,8 @@ if st.session_state.mode == "article":
                 for r in failed:
                     idx = r.get("slot_index", 0)
                     st.markdown(f"<div class='card warn'>⚠ <b>{r['url']}</b><br><span style='color:#888;font-size:0.8rem;'>{r['error']}</span></div>", unsafe_allow_html=True)
-
-            finalized_results, excluded = finalize_competitor_results(
-                st.session_state.comp_results,
-                st.session_state.comp_pastes,
-                is_usable_paste,
-            )
-            st.session_state.comp_results = finalized_results
-
-            if excluded:
-                st.warning("Research will exclude these competitors because they still have no usable content: " + ", ".join(item["url"] for item in excluded))
-
-            if st.session_state.comp_results:
+                st.warning("Research is paused. Add usable pasted content for every failed page below.")
+            else:
                 with st.spinner("Running deep research..."):
                     compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
                     st.session_state.research = research_competitors(
@@ -263,8 +261,6 @@ if st.session_state.mode == "article":
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
                 st.success("Research complete.")
-            else:
-                st.error("No competitor sources were usable for research.")
 
     # ── Show failed pastes persistently and allow re-run ─────────────────
     if st.session_state.comp_results:
@@ -287,21 +283,20 @@ if st.session_state.mode == "article":
                     st.session_state.comp_pastes[idx] = paste
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                any_paste_filled = any(
-                    st.session_state.comp_pastes[r.get("slot_index", 0)].strip()
+                all_failed_pages_pasted = all(
+                    is_usable_paste(st.session_state.comp_pastes[r.get("slot_index", 0)])
                     for r in failed_after
                 )
-                if any_paste_filled:
-                    if st.button("Re-run Research with Pasted Content", type="primary", key="rerun_research"):
+                if st.button("Run Research with Pasted Content", type="primary", key="rerun_research", disabled=not all_failed_pages_pasted):
                         finalized_results, excluded = finalize_competitor_results(
                             st.session_state.comp_results,
                             st.session_state.comp_pastes,
                             is_usable_paste,
                         )
-                        st.session_state.comp_results = finalized_results
                         if excluded:
-                            st.warning("Research will exclude these competitors because they still have no usable content: " + ", ".join(item["url"] for item in excluded))
-                        if st.session_state.comp_results:
+                            st.error("Research is still paused: add usable pasted content for " + ", ".join(item["url"] for item in excluded))
+                        else:
+                            st.session_state.comp_results = finalized_results
                             with st.spinner("Running deep research with pasted content..."):
                                 compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
                                 st.session_state.research = research_competitors(
@@ -506,20 +501,57 @@ if st.session_state.mode == "article":
                 st.markdown("<div class='lbl' style='margin-top:1rem;'>3A — Choose and edit a skeleton</div>", unsafe_allow_html=True)
                 skeletons = st.session_state.skeletons
                 edited_skeletons = {}
+                minimum_items = _min_listicle_items(st.session_state.research)
                 for label in ("A", "B"):
                     skeleton = skeletons.get(f"skeleton_{label.lower()}", {})
                     if not skeleton:
                         continue
-                    st.markdown(f"<div class='card'><div class='syne' style='font-size:1rem;font-weight:700;'>Skeleton {label} — {skeleton.get('tone', '')}</div><div style='font-size:0.8rem;color:#666;'>{skeleton.get('tone_rationale', '')}</div></div>", unsafe_allow_html=True)
+                    item_count = len(skeleton.get("the_list", []))
+                    st.markdown(f"<div class='card'><div class='syne' style='font-size:1rem;font-weight:700;'>Skeleton {label} — {skeleton.get('tone', '')}</div><div style='font-size:0.8rem;color:#666;'>{skeleton.get('tone_rationale', '')}</div><div class='lbl' style='margin-top:0.5rem;'>List coverage: {item_count} items (minimum target: {minimum_items})</div></div>", unsafe_allow_html=True)
+                    st.markdown("<div class='lbl'>Before the list</div>", unsafe_allow_html=True)
+                    pre_list = st.data_editor(
+                        skeleton.get("pre_list", []), num_rows="dynamic", hide_index=True,
+                        key=f"skeleton_pre_{label}", width="stretch",
+                        column_config={"heading": "H2 heading", "rationale": "Why it belongs here"},
+                    )
+                    st.markdown("<div class='lbl'>Main list</div>", unsafe_allow_html=True)
                     edited = st.data_editor(
                         skeleton.get("the_list", []), num_rows="dynamic", hide_index=True,
                         key=f"skeleton_items_{label}", width="stretch",
                         column_config={"name": "Item name", "why_included": "Why included", "source": "Source"},
                     )
+                    st.markdown("<div class='lbl'>After the list</div>", unsafe_allow_html=True)
+                    post_list = st.data_editor(
+                        skeleton.get("post_list", []), num_rows="dynamic", hide_index=True,
+                        key=f"skeleton_post_{label}", width="stretch",
+                        column_config={"heading": "H2 heading", "rationale": "Why it belongs here"},
+                    )
+                    pre_records = pre_list.to_dict("records") if hasattr(pre_list, "to_dict") else pre_list
                     edited_records = edited.to_dict("records") if hasattr(edited, "to_dict") else edited
-                    edited_skeletons[label] = dict(skeleton, the_list=edited_records)
+                    post_records = post_list.to_dict("records") if hasattr(post_list, "to_dict") else post_list
+                    edited_skeletons[label] = dict(skeleton, pre_list=pre_records, the_list=edited_records, post_list=post_records)
                     if st.button(f"Use Skeleton {label}", key=f"use_skeleton_{label}"):
                         st.session_state.chosen_skeleton = edited_skeletons[label]
+                        st.session_state.outlines = None
+                        st.session_state.chosen_outline = None
+                        st.rerun()
+
+                st.session_state.skeleton_feedback = st.text_area(
+                    "Feedback on these skeletons (optional)", value=st.session_state.skeleton_feedback,
+                    placeholder="e.g. add more options, remove weak entries, move the decision guide before the list",
+                    height=80, key="skeleton_feedback_input"
+                )
+                if st.button("🔄 Regenerate Skeletons from Feedback", disabled=not st.session_state.api_key, key="regenerate_skeletons"):
+                    feedback_directive = "\n\n".join(filter(None, [
+                        st.session_state.directive_outline,
+                        f"Feedback on the prior skeletons: {st.session_state.skeleton_feedback}",
+                    ]))
+                    with st.spinner("Regenerating list skeletons from your feedback..."):
+                        st.session_state.skeletons = generate_skeletons(
+                            get_client(), st.session_state.keyword, st.session_state.research,
+                            st.session_state.brand_knowledge, feedback_directive
+                        )
+                        st.session_state.chosen_skeleton = None
                         st.session_state.outlines = None
                         st.session_state.chosen_outline = None
                         st.rerun()

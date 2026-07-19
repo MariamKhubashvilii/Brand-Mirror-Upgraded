@@ -30,7 +30,7 @@ class ListicleHandler(ArticleTypeHandler):
     ) -> Tuple[str, str]:
         system = f"""You are a senior content strategist building the SKELETON of a listicle, not a full outline.
 Follow these SOPs: {SOPS}
-Use only the supplied research; do not invent unsupported facts. Return only valid JSON.
+Use the supplied research as evidence; do not invent unsupported facts. You may add generally established, clearly relevant items the competitors missed, but label them "added" and do not make unverified detailed claims about them. Return only valid JSON.
 
 A listicle skeleton has exactly three parts:
 1. pre_list: 1–3 structural H2 sections before the list.
@@ -41,6 +41,8 @@ Every the_list name must be the item's real name only—never a question or gene
         user = f"""Keyword: {keyword}
 Research: {json.dumps(research)}
 Custom directive: {directive or 'None'}
+
+Coverage requirement: the largest competitor covers about {(research or {}).get('max_competitor_list_items', 0)} items. Return at least {max(((research or {}).get('max_competitor_list_items', 0) or 0) + 2, 22)} distinct, genuinely relevant items. First retain strong competitor items, then add valid missing options; do not stop at competitor coverage or pad with weak/off-topic entries.
 
 Generate one skeleton, variant {variant_label}. Suggest a tone.
 Return JSON:

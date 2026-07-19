@@ -456,6 +456,7 @@ def generate_skeletons(client, keyword: str, research: dict, brand_knowledge: st
     """Generate two lightweight, editable skeleton variants for a supported type."""
     handler = get_handler(article_type)
     brand_context = select_relevant_context(keyword, brand_knowledge)
+    minimum_items = _min_listicle_items(research)
 
     def generate_one(label: str, contrast_note: str = "") -> dict:
         system, user = handler.build_skeleton_prompt(
@@ -464,6 +465,16 @@ def generate_skeletons(client, keyword: str, research: dict, brand_knowledge: st
         skeleton = chat_json(client, system, user, max_tokens=8000)
         if not isinstance(skeleton, dict) or not isinstance(skeleton.get("the_list"), list):
             raise ValueError(f"Skeleton {label} generation returned invalid JSON")
+        if len(skeleton["the_list"]) < minimum_items:
+            retry_directive = (
+                f"{directive}\nIMPORTANT: The previous skeleton had too few list items. "
+                f"Return at least {minimum_items} distinct, relevant items; each must be a separate the_list entry. "
+                "Do not replace the list with FAQ questions or generic categories."
+            )
+            system, user = handler.build_skeleton_prompt(keyword, research, brand_context, retry_directive, label)
+            skeleton = chat_json(client, system, user, max_tokens=12000)
+            if not isinstance(skeleton, dict) or not isinstance(skeleton.get("the_list"), list):
+                raise ValueError(f"Skeleton {label} retry returned invalid JSON")
         return skeleton
 
     skeleton_a = generate_one("A")
