@@ -13,7 +13,7 @@ except ImportError:  # pragma: no cover - optional dependency
     pd = None
 from llm import (
     research_competitors, score_existing_article, generate_outlines, generate_skeletons, expand_outline,
-    draft_sections, generate_final_article,
+    draft_sections, revise_drafted_sections, generate_final_article,
     analyze_landing_page_sections, generate_lp_suggestions,
     _looks_like_listicle_topic, _min_listicle_items, ARTICLE_TYPES
 )
@@ -133,7 +133,8 @@ init_state({
     "selection_confirmation": "", "skeleton_version": 0,
     "drafted": None, "user_edits": {},
     "final_article": "",
-    "directive_outline": "", "directive_draft": "", "directive_final": "",
+    "directive_outline": "", "directive_draft": "", "directive_revision": "", "directive_final": "",
+    "draft_revision_version": 0,
     "outline_feedback": "", "skeleton_feedback": "",
     "article_type": "",
     # landing page
@@ -486,7 +487,9 @@ if st.session_state.mode == "article":
         else:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<span class='step-badge'>3</span><span class='syne' style='font-size:1rem;font-weight:700;'>Generate Outlines</span>", unsafe_allow_html=True)
-            if st.session_state.selection_confirmation and st.session_state.article_type != "listicle":
+            if st.session_state.selection_confirmation and (
+                st.session_state.article_type != "listicle" or st.session_state.outlines
+            ):
                 st.success(st.session_state.selection_confirmation)
                 st.session_state.selection_confirmation = ""
             st.session_state.directive_outline = st.text_input(
@@ -636,6 +639,8 @@ if st.session_state.mode == "article":
                             )
                             st.session_state.outlines = {"outline_a": expanded}
                             st.session_state.chosen_outline = "A"
+                            st.session_state.skeletons = None
+                            st.session_state.chosen_skeleton = None
                             st.session_state.selection_confirmation = "Your selected listicle outline has been expanded and is ready to draft."
                             st.session_state.drafted = None
                             st.session_state.final_article = ""
@@ -663,6 +668,8 @@ if st.session_state.mode == "article":
                     chosen = st.session_state.chosen_outline == label
                     card_cls = "card accent" if chosen else "card"
                     is_expanded_listicle = is_listicle_now and bool(ol.get("skeleton"))
+                    if is_expanded_listicle:
+                        continue
                     display_title = "Expanded Listicle" if is_expanded_listicle else f"Outline {label}"
                     st.markdown(f"<div class='{card_cls}'>", unsafe_allow_html=True)
                     st.markdown(f"<div class='syne' style='font-size:1rem;font-weight:700;'>{display_title} — {ol.get('tone','')}</div>", unsafe_allow_html=True)
@@ -690,16 +697,17 @@ if st.session_state.mode == "article":
                         st.rerun()
 
                 st.markdown("<br>", unsafe_allow_html=True)
-                feedback_label = "Feedback on expanded listicle (optional)" if is_listicle_now else "Feedback on outlines (optional)"
-                st.session_state.outline_feedback = st.text_area(
-                    feedback_label,
-                    value=st.session_state.outline_feedback,
-                    placeholder="e.g. make outline A shorter, add a comparison section, remove the FAQ from B",
-                    height=80,
-                    key="outline_fb"
-                )
+                show_outline_feedback = not (is_listicle_now and isinstance(oa, dict) and oa.get("skeleton"))
+                if show_outline_feedback:
+                    st.session_state.outline_feedback = st.text_area(
+                        "Feedback on outlines (optional)",
+                        value=st.session_state.outline_feedback,
+                        placeholder="e.g. make outline A shorter, add a comparison section, remove the FAQ from B",
+                        height=80,
+                        key="outline_fb"
+                    )
                 regenerate_label = "🔄 Regenerate List Skeletons" if is_listicle_flow else "🔄 Regenerate Outlines"
-                if st.button(regenerate_label, disabled=not st.session_state.api_key):
+                if show_outline_feedback and st.button(regenerate_label, disabled=not st.session_state.api_key):
                     with st.spinner("Regenerating list skeletons..." if is_listicle_flow else "Regenerating outlines..."):
                         if is_listicle_flow:
                             st.session_state.skeletons = generate_skeletons(
@@ -760,6 +768,7 @@ if st.session_state.mode == "article":
                                 st.session_state.research, st.session_state.directive_draft
                             )
                             st.session_state.user_edits = {}
+                            st.session_state.draft_revision_version += 1
 
                     if st.session_state.drafted:
                         st.markdown("<br><div class='lbl'>Drafted Sections — Edit inline if needed</div>", unsafe_allow_html=True)
@@ -772,9 +781,27 @@ if st.session_state.mode == "article":
                             st.markdown("</div>", unsafe_allow_html=True)
                             edited = st.text_area(
                                 f"Edit: {ds['heading']}", value=ds["content"],
-                                height=180, key=f"edit_{ds['heading']}", label_visibility="collapsed"
+                                height=180, key=f"edit_{ds['heading']}_{st.session_state.draft_revision_version}", label_visibility="collapsed"
                             )
                             st.session_state.user_edits[ds["heading"]] = edited
+
+                        st.markdown("<br><div class='lbl'>Revise Sample Drafts</div>", unsafe_allow_html=True)
+                        st.session_state.directive_revision = st.text_input(
+                            "Revision direction (optional)", value=st.session_state.directive_revision,
+                            placeholder="e.g. make these warmer, use shorter sentences, add more concrete examples",
+                            key="dir_revision"
+                        )
+                        if st.button("Revise Draft Samples", disabled=not st.session_state.anthropic_key):
+                            with st.spinner("Revising the sample sections..."):
+                                st.session_state.drafted = revise_drafted_sections(
+                                    get_claude_client(), st.session_state.keyword, chosen_ol,
+                                    st.session_state.drafted.get("drafted_sections", []),
+                                    st.session_state.user_edits, st.session_state.brand_knowledge,
+                                    st.session_state.research, st.session_state.directive_revision,
+                                )
+                                st.session_state.user_edits = {}
+                                st.session_state.draft_revision_version += 1
+                                st.rerun()
 
                         # ── STEP 5: Final article ───────────────────────────
                         st.markdown("<br>", unsafe_allow_html=True)

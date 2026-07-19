@@ -253,6 +253,29 @@ Write the section in markdown and keep it focused on the brief. Use only the pro
     return system, user
 
 
+def build_draft_revision_prompt(keyword: str, tone: str, brand_context: str, section: dict,
+                                source_evidence: list[dict], current_draft: str,
+                                directive: str) -> tuple[str, str]:
+    system = f"""You are an expert content editor revising one markdown article section.
+Follow these SOPs: {SOPS}
+Follow these AI visibility principles: {AI_VISIBILITY_GUIDE}
+{build_guardrail_prompt()}
+Return only the revised section in markdown. Keep the H2 heading and improve the existing draft rather than replacing its purpose."""
+    user = f"""Keyword: {keyword}
+Tone: {tone}
+Relevant brand context: {brand_context}
+Section heading: {section.get('heading', '')}
+Section brief: {section.get('content_brief', '')}
+Source evidence for this section: {json.dumps(source_evidence, ensure_ascii=False)}
+Revision direction: {directive or 'Improve clarity, specificity, and brand fit while keeping the factual grounding.'}
+
+Current draft:
+{current_draft}
+
+Revise this one section only."""
+    return system, user
+
+
 def build_final_article_prompt(keyword: str, outline: dict, drafted_sections: list[dict], edits_block: str, relevant_brand_context: str, research_summary: dict, directive: str) -> tuple[str, str]:
     system = f"""You are an expert content writer producing a final polished article.
 Follow these SOPs: {SOPS}

@@ -30,6 +30,7 @@ from prompts import (
     build_outline_retry_system_prompt,
     build_outline_retry_user_prompt,
     build_draft_sections_prompt,
+    build_draft_revision_prompt,
     build_final_article_prompt,
     build_landing_page_analysis_prompt,
     build_landing_page_suggestions_prompt,
@@ -565,6 +566,30 @@ def draft_sections(client, claude_client, keyword: str, outline: dict, selected_
         })
         section_state["summaries"].append(f"{section['heading']}: {content[:120].replace(chr(10), ' ')}")
     return {"drafted_sections": drafted_sections}
+
+
+def revise_drafted_sections(claude_client, keyword: str, outline: dict, drafted_sections: list[dict],
+                            user_edits: dict, brand_knowledge: str, research: dict,
+                            directive: str) -> dict:
+    """Revise the sample sections in place before committing to a full article."""
+    relevant_brand_context = select_relevant_context(keyword, brand_knowledge)
+    evidence_index = (research.get("evidence_synthesis") or {}).get("evidence_index", {})
+    sections_by_heading = {section.get("heading"): section for section in outline.get("sections", [])}
+    revised = []
+    for drafted in drafted_sections:
+        heading = drafted.get("heading", "")
+        section = sections_by_heading.get(heading, {"heading": heading})
+        source_evidence = [
+            evidence_index[evidence_id] for evidence_id in section.get("evidence_ids", [])
+            if evidence_id in evidence_index
+        ]
+        current_draft = user_edits.get(heading, drafted.get("content", ""))
+        system, user = build_draft_revision_prompt(
+            keyword, outline.get("tone", ""), relevant_brand_context, section,
+            source_evidence, current_draft, directive,
+        )
+        revised.append({**drafted, "content": chat_claude(claude_client, system, user, max_tokens=6000)})
+    return {"drafted_sections": revised}
 
 # ── Article: final version ───────────────────────────────────────────────────
 def generate_final_article(client, claude_client, keyword: str, outline: dict, drafted_sections: list[dict],
