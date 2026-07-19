@@ -319,7 +319,7 @@ if st.session_state.mode == "article":
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("Entity / attribute frequency matrix"):
                 if pd is not None:
-                    st.dataframe(pd.DataFrame(entity_rows), use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(entity_rows), width="stretch", hide_index=True)
                 else:
                     for row in entity_rows:
                         st.write(row)
