@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from extraction import build_competitor_context
-from llm import build_entity_frequency_table
+from llm import build_entity_frequency_table, research_competitors
 
 
 class FakeResponse:
@@ -66,3 +66,17 @@ def test_build_entity_frequency_table_counts_terms_exactly():
     assert table["NumPy"]["coverage"] == "2/2"
     assert table["beginner-friendly"]["total_mentions"] == 1
     assert table["beginner-friendly"]["coverage"] == "1/2"
+
+
+def test_research_competitors_includes_entity_frequency_matrix():
+    client = FakeClient('{"search_intent": "tutorial", "content_gaps": [], "unique_angles": [], "lsi_keywords": [], "questions_to_answer": [], "ai_visibility_recommendations": [], "competitor_weaknesses": [], "recommended_word_count": 1200, "schema_types": ["FAQ"]}')
+    competitors = [
+        {"url": "https://one.com", "text": "NumPy is fast and beginner-friendly.", "entities": ["NumPy"], "attributes": ["beginner-friendly"]},
+        {"url": "https://two.com", "text": "NumPy is lightweight.", "entities": ["NumPy"], "attributes": ["lightweight"]},
+    ]
+
+    result = research_competitors(client, "numpy tutorial", competitors, "")
+
+    assert result["entity_frequency_table"]["NumPy"]["total_mentions"] == 2
+    assert result["entity_frequency_table"]["beginner-friendly"]["coverage"] == "1/2"
+    assert "underused_but_important" in result

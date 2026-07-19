@@ -228,7 +228,10 @@ Return JSON with this structure:
   "recommended_word_count": 1200,
   "schema_types": ["FAQ", "HowTo", "..."]
 }}"""
-    return chat_json(client, system, user)
+    payload = chat_json(client, system, user)
+    payload["entity_frequency_table"] = frequency_table
+    payload["underused_but_important"] = underused
+    return payload
 
 # ── Article: score existing ──────────────────────────────────────────────────
 def score_existing_article(client, article_text: str, keyword: str, brand_knowledge: str, directive: str = "") -> dict:
