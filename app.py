@@ -13,7 +13,8 @@ except ImportError:  # pragma: no cover - optional dependency
 from llm import (
     research_competitors, score_existing_article, generate_outlines,
     draft_sections, generate_final_article,
-    analyze_landing_page_sections, generate_lp_suggestions
+    analyze_landing_page_sections, generate_lp_suggestions,
+    _looks_like_listicle_topic
 )
 from source_flow import build_competitor_results, finalize_competitor_results
 
@@ -466,6 +467,17 @@ if st.session_state.mode == "article":
             if st.session_state.outlines:
                 outlines = st.session_state.outlines
                 oa, ob = outlines.get("outline_a"), outlines.get("outline_b")
+                directive_for_warning = st.session_state.directive_outline or st.session_state.outline_feedback or ""
+                sparse_warnings = []
+
+                for label, ol in [("A", oa), ("B", ob)]:
+                    if isinstance(ol, dict) and _looks_like_listicle_topic(st.session_state.keyword, directive_for_warning):
+                        sections = ol.get("sections") or []
+                        if isinstance(sections, list) and len(sections) <= 2:
+                            sparse_warnings.append(f"Outline {label} still has only {len(sections)} section(s).")
+
+                if sparse_warnings:
+                    st.warning("The topic looks comprehensive, but the outline is still too sparse. Consider adding more H2 sections for the item list.")
 
                 for label, ol in [("A", oa), ("B", ob)]:
                     if not ol: continue

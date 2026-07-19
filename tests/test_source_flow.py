@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from llm import research_competitors
+from llm import research_competitors, _looks_like_listicle_topic, _needs_retry_for_sparse_outline
 from source_flow import build_competitor_results, finalize_competitor_results
 
 
@@ -74,3 +74,19 @@ def test_research_competitors_reports_all_sources():
     assert result["source_count"] == 3
     assert result["source_urls"] == ["https://one.com", "https://two.com", "https://three.com"]
     assert result["entity_frequency_table"]["NumPy"]["coverage"] == "3/3"
+
+
+def test_listicle_detector_catches_library_and_tool_keywords():
+    assert _looks_like_listicle_topic("Python libraries for data science") is True
+    assert _looks_like_listicle_topic("best tools for SEO") is True
+    assert _looks_like_listicle_topic("how to write a blog post") is False
+
+
+def test_sparse_outline_detection_flags_comprehensive_topics():
+    outline = {
+        "outline_a": {"sections": [{"heading": "Intro", "level": "H2"}]},
+        "outline_b": {"sections": [{"heading": "Intro", "level": "H2"}]},
+    }
+
+    assert _needs_retry_for_sparse_outline(outline, "Python libraries for data science", "include more libraries") is True
+    assert _needs_retry_for_sparse_outline(outline, "how to write a blog post", "include more detail") is False

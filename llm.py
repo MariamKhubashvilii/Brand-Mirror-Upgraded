@@ -143,6 +143,33 @@ def _build_guardrail_prompt() -> str:
     return "Use only the provided text and sources. If something is not covered by the source content, say 'not enough information in the source content' rather than inventing details."
 
 
+def _looks_like_listicle_topic(keyword: str, directive: str = "") -> bool:
+    text = f"{keyword}\n{directive}".lower()
+    if not text.strip():
+        return False
+    listicle_markers = [
+        " best ", " top ", " alternatives to ", " options ", " tools ", " libraries ", " apps ", " platforms ", " resources ",
+        " for beginners", " for seo", " for data science", " for y", " for x", "vs", " versus ", " compare ", " comparison ",
+    ]
+    if any(marker in text for marker in listicle_markers):
+        return True
+    if re.search(r"\b(?:libraries|tools|apps|platforms|resources|options|alternatives)\b", text):
+        return True
+    return False
+
+
+def _needs_retry_for_sparse_outline(outlines: dict, keyword: str, directive: str = "") -> bool:
+    if not isinstance(outlines, dict):
+        return False
+    if not _looks_like_listicle_topic(keyword, directive):
+        return False
+    for key in ("outline_a", "outline_b"):
+        sections = outlines.get(key, {}).get("sections") or []
+        if isinstance(sections, list) and len(sections) <= 2:
+            return True
+    return False
+
+
 def _apply_compliance_loop(text: str, rules: Dict[str, Any], *, keyword: str, tone: str, brand_context: str, directive: str, writer_fn, client, claude_client, max_tokens: int = 4000) -> tuple[str, Dict[str, Any]]:
     draft = text
     report = compliance_report(draft, rules)
@@ -280,6 +307,7 @@ Return JSON:
 # ── Article: generate two outlines ──────────────────────────────────────────
 def generate_outlines(client, keyword: str, research: dict, brand_knowledge: str, directive: str = "") -> dict:
     relevant_brand_context = select_relevant_context(keyword, brand_knowledge)
+    listicle_mode = _looks_like_listicle_topic(keyword, directive)
     system = f"""You are a senior content strategist. Generate two distinct article outlines with different tones.
 Follow these SOPs: {SOPS}
 And these AI visibility principles: {AI_VISIBILITY_GUIDE}
@@ -290,12 +318,16 @@ Section count is not fixed. Use as many H2 sections as the topic genuinely needs
 A thorough outline is often 6-10 H2 sections with 1-3 H3 subsections where relevant, but that's a typical
 range, not a ceiling. If the topic legitimately needs more, use more.
 
-Listicle handling: if the keyword is list-format (best X, top X, X vs Y vs Z, alternatives to X, etc.),
-do not cap the list at what competitors happen to cover. Research the full set of options, tools, or
-approaches that are genuinely valid for the topic, including ones no competitor mentions. Then apply a
-critical filter before including anything: drop items that don't fit the brand, are discontinued or
-outdated, or wouldn't hold up to a knowledgeable reader checking them. The goal is a list that is more
-complete and more accurate than any single competitor's, not a superset padded with weak entries.
+Listicle handling: if the keyword or directive suggests a set of items, tools, options, libraries, apps,
+platforms, resources, or alternatives, treat it as a comprehensive list topic. Do not cap the list at what
+competitors happen to cover. Research the full set of valid options and make each substantial item its own
+H2 section. Do not compress several items into one section or bury them inside a single key_points list.
+If the topic is list/comparison/comprehensive, the outline should usually have one H2 section per major item
+or cluster of closely related items, plus any intro/FAQ/CTA/conclusion sections needed.
+
+If the custom directive asks to include more items, more libraries/tools/options, or to exceed competitor
+coverage, each additional item must become its own H2 section following the existing section schema — do not
+compress multiple items into the key_points or content_brief of a single section.
 
 Be critical of the competitor research, not deferential to it. Where competitor articles are bloated with
 filler, tangents, or repeated points, do not mirror that bloat. For each candidate section or list item,
@@ -306,13 +338,19 @@ Base the structure on the competitor research and search intent, filtered throug
 judgment, not on any default template.
 
 If a custom directive is given below, it overrides any instruction above it that it conflicts with. Treat
-it as the final word on structure, scope, section count, and list length for this outline."""
+it as the final word on structure, scope, section count, and list length for this outline.
+
+If this is a list/comparison/comprehensive topic, prioritize breadth and coverage over brevity, and make sure
+the outline contains enough H2 sections to cover the full set of distinct items rather than a single summary
+section.
+"""
     user = f"""Keyword: {keyword}
 Relevant Brand Context: {relevant_brand_context}
 Research: {json.dumps(research)}
 Custom Directive for Outline stage (overrides the system instructions above wherever they conflict): {directive or 'None'}
 
 Generate two outlines. For each, suggest a distinct tone based on the research.
+If the topic is list/comparison/comprehensive, make sure each major item or tool has its own H2 section, not a bullet list inside one section.
 Return JSON:
 {{
   "outline_a": {{
@@ -392,7 +430,27 @@ Return JSON:
     ]
   }}
 }}"""
-    return chat_json(client, system, user, max_tokens=8000)
+    try:
+        outlines = chat_json(client, system, user, max_tokens=12000)
+    except Exception:
+        outlines = chat_json(client, system, user, max_tokens=12000)
+
+    if not isinstance(outlines, dict):
+        raise ValueError("Outline generation returned invalid JSON")
+
+    if _needs_retry_for_sparse_outline(outlines, keyword, directive):
+        retry_system = f"""{system}
+
+IMPORTANT: The previous response was too sparse for a comprehensive list/comparison topic. Return a much more detailed outline with many H2 sections. Each major item, tool, library, app, or option should receive its own H2 section. Do not compress multiple items into one section. Keep the section payload compact but ensure full coverage."""
+        retry_user = f"""{user}
+
+The previous answer was too sparse for this topic. Expand the outline substantially. Make each significant item its own H2 section, and keep the rest of the structure compact. Do not produce only one or two sections."""
+        outlines = chat_json(client, retry_system, retry_user, max_tokens=14000)
+
+    if not isinstance(outlines, dict):
+        raise ValueError("Outline generation returned invalid JSON")
+
+    return outlines
 
 # ── Article: draft selected sections ────────────────────────────────────────
 def draft_sections(client, claude_client, keyword: str, outline: dict, selected_headings: list[str],
