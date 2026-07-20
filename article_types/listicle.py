@@ -45,9 +45,11 @@ Custom directive: {directive or 'None'}
 Coverage requirement: the largest competitor covers about {(research or {}).get('max_competitor_list_items', 0)} items. Return at least {max(((research or {}).get('max_competitor_list_items', 0) or 0) + 2, 22)} distinct, genuinely relevant items. First retain strong competitor items, then add valid missing options; do not stop at competitor coverage or pad with weak/off-topic entries.
 
 Generate one skeleton, variant {variant_label}. Suggest a tone.
+Recommend a component sequence for the list-item sections based on the research and search intent. Choose only from heading, paragraph, table, pros_cons, bullets, screenshot, quote.
 Return JSON:
 {{
   "tone": "string", "tone_rationale": "string",
+  "recommended_structure": ["heading", "paragraph", "bullets"], "structure_rationale": "string",
   "pre_list": [{{"heading": "string", "rationale": "string"}}],
   "the_list": [{{"name": "string", "why_included": "string", "source": "competitor|added"}}],
   "post_list": [{{"heading": "string", "rationale": "string"}}]

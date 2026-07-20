@@ -602,25 +602,43 @@ if st.session_state.mode == "article":
 
                 if st.session_state.chosen_skeleton:
                     st.markdown("<div class='lbl' style='margin-top:1rem;'>3B — Choose what appears inside each list-item section</div>", unsafe_allow_html=True)
-                    st.caption("These elements are applied inside every list-item H2. The complete skeleton stays intact; in Step 4 you choose which whole H2 sections to draft as writing samples.")
+                    st.caption("Choose the whole H2 sections to draft as writing samples. The full skeleton remains the plan for the final article. Then choose or adjust the elements inside every list-item H2.")
                     approved_skeleton = st.session_state.chosen_skeleton
+                    pre_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("pre_list", []) if isinstance(entry, dict)]
+                    list_headings = [entry.get("name", "Untitled item") for entry in approved_skeleton.get("the_list", []) if isinstance(entry, dict)]
+                    post_headings = [entry.get("heading", "Untitled section") for entry in approved_skeleton.get("post_list", []) if isinstance(entry, dict)]
+                    all_skeleton_headings = pre_headings + list_headings + post_headings
+                    selected_sample_headings = st.multiselect(
+                        "Whole H2 sections to draft as samples",
+                        all_skeleton_headings,
+                        default=all_skeleton_headings[:2],
+                        help="For example, choose the introduction, Scikit-learn, and Final Thoughts. These samples let you judge the writing before the full article is created.",
+                        key=f"listicle_sample_h2s_{st.session_state.skeleton_version}",
+                    )
                     options = skeletons.get("structure_options", [])
                     option_ids = [option["id"] for option in options]
                     selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
                     preset = next(option for option in options if option["id"] == selected_option)
+                    suggested_components = [
+                        component for component in approved_skeleton.get("recommended_structure", [])
+                        if component in ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"]
+                    ] or preset["components"]
+                    if approved_skeleton.get("structure_rationale"):
+                        st.caption(f"Research-based suggestion: {', '.join(suggested_components)} — {approved_skeleton['structure_rationale']}")
                     components = st.multiselect(
                         "Elements inside every list-item H2 — not sections to draft", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
-                        default=preset["components"], key=f"listicle_components_{st.session_state.skeleton_version}"
+                        default=suggested_components, key=f"listicle_components_{st.session_state.skeleton_version}"
                     )
                     if "heading" not in components:
                         components.insert(0, "heading")
-                    if st.button("Prepare Draft Samples", type="primary", disabled=not st.session_state.api_key):
+                    if st.button("Prepare Draft Samples", type="primary", disabled=not (st.session_state.api_key and selected_sample_headings)):
                         with st.spinner("Expanding the approved skeleton..."):
                             expanded = expand_outline(
                                 get_client(), st.session_state.keyword, approved_skeleton,
                                 components, st.session_state.research, st.session_state.brand_knowledge,
                                 st.session_state.directive_outline,
                             )
+                            expanded["sample_headings"] = selected_sample_headings
                             st.session_state.outlines = {"outline_a": expanded}
                             st.session_state.chosen_outline = "A"
                             st.session_state.skeletons = None
@@ -722,6 +740,7 @@ if st.session_state.mode == "article":
                     list_item_headings = [
                         s["heading"] for s in chosen_ol.get("sections", []) if s.get("type") == "listitem"
                     ]
+                    sample_headings = chosen_ol.get("sample_headings", [])
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<span class='step-badge'>4</span><span class='syne' style='font-size:1rem;font-weight:700;'>Draft Sections</span>", unsafe_allow_html=True)
@@ -730,10 +749,11 @@ if st.session_state.mode == "article":
 
                     structural_to_draft = st.multiselect(
                         "Structural sections to draft", structural_headings,
-                        default=structural_headings[:2], key="structural_sections_to_draft"
+                        default=[heading for heading in structural_headings if heading in sample_headings] or structural_headings[:2], key="structural_sections_to_draft"
                     )
                     list_items_to_draft = st.multiselect(
                         "List items to draft", list_item_headings,
+                        default=[heading for heading in list_item_headings if heading in sample_headings],
                         placeholder="Choose one or more items from the main list",
                         key="list_items_to_draft"
                     )
