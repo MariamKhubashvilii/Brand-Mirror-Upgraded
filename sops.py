@@ -79,6 +79,12 @@ Pick a topic you know well enough to be useful and narrow enough to be specific.
 Write the first post before you worry about the design, the domain name, or the newsletter setup. Most blogs never launch because the writer spent two weeks picking fonts.
 """
 
+SOP_BANNED_WORDS = [
+    "delve", "crucial", "robust", "seamless", "leverage", "comprehensive", "optimize",
+    "unlock", "elevate", "transformative", "dynamic", "innovative", "cutting-edge",
+    "powerful", "revolutionary", "navigate", "journey", "ecosystem", "landscape",
+]
+
 AI_VISIBILITY_GUIDE = """
 1. Entity Association: Define entities clearly with schema @id and sameAs to Wikidata/DBpedia. Structure around entity-attribute relationships, not just keywords.
 2. Semantic HTML: Use descriptive nested headings (H1>H2>H3), well-formatted lists and tables, definition blocks after headings. Include a table of contents for long articles.

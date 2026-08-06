@@ -6,49 +6,48 @@ from .base import ArticleTypeHandler
 
 
 STRUCTURE_COMPONENTS = {
-    "heading": "H2 with the item's real name only.",
-    "paragraph": "A 2–4 sentence explanation of what it is and why it is included.",
-    "table": "A small spec or feature table with 2–6 useful rows.",
-    "pros_cons": "Short, balanced pros and cons lists.",
-    "bullets": "Three to five concise key-feature bullets.",
-    "screenshot": "A placeholder note for an image or screenshot.",
+    "heading": "H2 with the subtopic's real name only.",
+    "paragraph": "A 2–5 sentence explanation of this subtopic.",
+    "bullets": "Three to five concise key-point bullets.",
+    "table": "A small reference or comparison table with 2–6 useful rows, only when it aids clarity.",
+    "example": "A concrete example or short case illustrating this subtopic, only when supported by research.",
     "quote": "An optional pull quote or callout stat, only when supported by research.",
 }
 
 
-class ListicleHandler(ArticleTypeHandler):
+class GuideHandler(ArticleTypeHandler):
     def available_components(self) -> List[str]:
         return list(STRUCTURE_COMPONENTS.keys())
 
     def structure_options(self) -> List[Dict]:
         return [
             {"id": "compact", "label": "Compact", "components": ["heading", "paragraph", "bullets"]},
-            {"id": "detailed", "label": "Detailed", "components": ["heading", "paragraph", "table", "pros_cons"]},
-            {"id": "visual", "label": "Visual", "components": ["heading", "screenshot", "paragraph", "bullets"]},
+            {"id": "detailed", "label": "Detailed", "components": ["heading", "paragraph", "example", "table"]},
+            {"id": "visual", "label": "Visual", "components": ["heading", "paragraph", "bullets", "quote"]},
         ]
 
     def build_skeleton_prompt(
         self, keyword: str, research: Dict, brand_context: str,
         directive: str, variant_label: str,
     ) -> Tuple[str, str]:
-        system = f"""You are a senior content strategist building the SKELETON of a listicle, not a full outline.
+        system = f"""You are a senior content strategist building the SKELETON of a guide/informational article, not a full outline.
 Follow these SOPs: {SOPS}
-Use the supplied research as evidence; do not invent unsupported facts. You may add generally established, clearly relevant items the competitors missed, but label them "added" and do not make unverified detailed claims about them. Return only valid JSON.
+Use the supplied research as evidence; do not invent unsupported facts. You may add generally established, clearly relevant subtopics the competitors missed, but label them "added" and do not make unverified detailed claims about them. Return only valid JSON.
 
-A listicle skeleton has exactly three parts:
-1. pre_list: 1–3 structural H2 sections before the list.
-2. the_list: every item in the list. Each item has only name, why_included, and source.
-3. post_list: 1–3 structural H2 sections after the list.
+A guide skeleton has exactly three parts:
+1. pre_list: 1–2 structural H2 sections before the subtopics — an intro framing the topic and why it matters to the reader.
+2. the_list: every major subtopic/theme the guide should cover, one H2 each, in a logical reading order. Each item has only name, why_included, and source.
+3. post_list: 1–3 structural H2 sections after the subtopics — a key-takeaways/summary section, and optionally an FAQ.
 
-Every the_list name must be the item's real name only—never a question or generic phrase. Do not produce content briefs, keywords, key points, or question-style list-item headings. Brand context: {brand_context}"""
+Every the_list name must be the subtopic's real name only—never a question or generic phrase. Do not produce content briefs, keywords, key points, or question-style headings for subtopics. Brand context: {brand_context}"""
         user = f"""Keyword: {keyword}
 Research: {json.dumps(research)}
 Custom directive: {directive or 'None'}
 
-Coverage requirement: the largest competitor covers about {(research or {}).get('max_competitor_list_items', 0)} items. Return at least {max(((research or {}).get('max_competitor_list_items', 0) or 0) + 2, 22)} distinct, genuinely relevant items. First retain strong competitor items, then add valid missing options; do not stop at competitor coverage or pad with weak/off-topic entries.
+Cover every subtopic genuinely important to understanding this topic — retain strong competitor-covered subtopics first, then add valid missing subtopics; do not pad with weak, redundant, or off-topic entries.
 
 Generate one skeleton, variant {variant_label}. Suggest a tone.
-Recommend a component sequence for the list-item sections based on the research and search intent. Choose only from heading, paragraph, table, pros_cons, bullets, screenshot, quote.
+Recommend a component sequence for the subtopic sections based on the research and search intent. Choose only from heading, paragraph, bullets, table, example, quote.
 Return JSON:
 {{
   "tone": "string", "tone_rationale": "string",
@@ -65,14 +64,14 @@ Return JSON:
     ) -> Tuple[str, str]:
         invalid = [component for component in structure_template if component not in STRUCTURE_COMPONENTS]
         if invalid:
-            raise ValueError(f"Unknown listicle structure component(s): {', '.join(invalid)}")
+            raise ValueError(f"Unknown guide structure component(s): {', '.join(invalid)}")
         component_notes = "\n".join(f"- {component}: {STRUCTURE_COMPONENTS[component]}" for component in structure_template)
-        system = f"""You are a senior content strategist expanding an approved listicle skeleton into a full outline.
+        system = f"""You are a senior content strategist expanding an approved guide skeleton into a full outline.
 Follow these SOPs: {SOPS}
 Apply these AI visibility principles: {AI_VISIBILITY_GUIDE}
-Use only the supplied research and skeleton. Do not add, remove, rename, or reorder list items. Return only valid JSON.
+Use only the supplied research and skeleton. Do not add, remove, rename, or reorder subtopics. Return only valid JSON.
 
-Every item must follow this exact structure, in order:
+Every subtopic must follow this exact structure, in order:
 {component_notes}
 
 Every expanded section must include evidence_ids: the IDs from the research evidence_index that support its factual claims. Structural pre-list and post-list sections use the fuller outline schema: heading, level, type, key_points, keywords_to_use, from_competitor, from_brand, ai_visibility_note, rationale, word_count_target, content_brief, and evidence_ids.

@@ -13,10 +13,12 @@ except ImportError:  # pragma: no cover - optional dependency
     pd = None
 from llm import (
     research_competitors, score_existing_article, generate_outlines, generate_skeletons, expand_outline,
-    draft_sections, revise_drafted_sections, generate_final_article,
+    draft_sections, revise_drafted_sections, generate_final_article, run_quality_check,
     analyze_landing_page_sections, generate_lp_suggestions,
     _looks_like_listicle_topic, _min_listicle_items, ARTICLE_TYPES
 )
+from article_types import has_handler, get_handler
+from brands import list_brand_profiles, load_brand_profile, merge_brand_knowledge
 from source_flow import build_competitor_results, finalize_competitor_results
 
 st.set_page_config(page_title="SEO Writer", page_icon="✍️", layout="wide")
@@ -132,7 +134,7 @@ init_state({
     "outlines": None, "chosen_outline": None, "skeletons": None, "chosen_skeleton": None,
     "selection_confirmation": "", "skeleton_version": 0,
     "drafted": None, "user_edits": {},
-    "final_article": "",
+    "final_article": "", "quality_check": None,
     "directive_outline": "", "directive_draft": "", "directive_revision": "", "directive_final": "",
     "draft_revision_version": 0,
     "outline_feedback": "", "skeleton_feedback": "",
@@ -201,6 +203,19 @@ with st.sidebar:
         placeholder="e.g.\nBrand voice: casual, direct, never corporate\nAudience: young men 18-30 into streetwear\nUSPs: below-retail prices, fast shipping\nBanned words: innovative, leverage, utilize\nCTA style: short, action-first ('Shop now', 'Get yours')"
     )
 
+    brand_profiles = list_brand_profiles()
+    selected_brand_name = st.selectbox(
+        "Or Choose a Brand", ["None"] + list(brand_profiles.keys()),
+        index=0, key="brand_profile_select",
+        help="Loads a saved brand profile and combines it with whatever's typed above. Switch back to None to use only the typed text."
+    )
+    if selected_brand_name != "None":
+        effective_brand_knowledge = merge_brand_knowledge(
+            load_brand_profile(brand_profiles[selected_brand_name]), st.session_state.brand_knowledge
+        )
+    else:
+        effective_brand_knowledge = st.session_state.brand_knowledge
+
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 if st.session_state.mode == "article":
     st.markdown("<h1 class='syne' style='font-size:2.2rem;font-weight:800;margin-bottom:0;'>Article Writer</h1>", unsafe_allow_html=True)
@@ -251,6 +266,7 @@ if st.session_state.mode == "article":
             st.session_state.chosen_skeleton = None
             st.session_state.drafted = None
             st.session_state.final_article = ""
+            st.session_state.quality_check = None
             with st.spinner("Scraping competitor pages..."):
                 st.session_state.comp_results = build_competitor_results(
                     st.session_state.comp_urls,
@@ -269,15 +285,16 @@ if st.session_state.mode == "article":
                 st.warning("Research is paused. Add usable pasted content for every failed page below.")
             else:
                 with st.spinner("Running deep research..."):
-                    compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
+                    compressed = build_research_payload(st.session_state.comp_results, get_client(), effective_brand_knowledge)
                     st.session_state.research = research_competitors(
-                        get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
+                        get_client(), st.session_state.keyword, compressed, effective_brand_knowledge
                     )
                     st.session_state.outlines = None
                     st.session_state.skeletons = None
                     st.session_state.chosen_skeleton = None
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
+                    st.session_state.quality_check = None
                 st.success("Research complete.")
 
     # ── Show failed pastes persistently and allow re-run ─────────────────
@@ -316,15 +333,16 @@ if st.session_state.mode == "article":
                         else:
                             st.session_state.comp_results = finalized_results
                             with st.spinner("Running deep research with pasted content..."):
-                                compressed = build_research_payload(st.session_state.comp_results, get_client(), st.session_state.brand_knowledge)
+                                compressed = build_research_payload(st.session_state.comp_results, get_client(), effective_brand_knowledge)
                                 st.session_state.research = research_competitors(
-                                    get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
+                                    get_client(), st.session_state.keyword, compressed, effective_brand_knowledge
                                 )
                                 st.session_state.outlines = None
                                 st.session_state.skeletons = None
                                 st.session_state.chosen_skeleton = None
                                 st.session_state.drafted = None
                                 st.session_state.final_article = ""
+                                st.session_state.quality_check = None
                         st.rerun()
 
     # ── STEP 2: Research display ────────────────────────────────────────────
@@ -421,7 +439,7 @@ if st.session_state.mode == "article":
                         with st.spinner("Scoring against SOPs..."):
                             result = score_existing_article(
                                 get_client(), pasted, st.session_state.keyword,
-                                st.session_state.brand_knowledge, st.session_state.directive_outline
+                                effective_brand_knowledge, st.session_state.directive_outline
                             )
                             st.session_state.existing_score = result
                             st.session_state.confirmed_suggestions = {}
@@ -431,7 +449,7 @@ if st.session_state.mode == "article":
                     with st.spinner("Scoring against SOPs..."):
                         result = score_existing_article(
                             get_client(), own["text"], st.session_state.keyword,
-                            st.session_state.brand_knowledge, st.session_state.directive_outline
+                            effective_brand_knowledge, st.session_state.directive_outline
                         )
                         st.session_state.existing_score = result
                         st.session_state.confirmed_suggestions = {}
@@ -488,7 +506,7 @@ if st.session_state.mode == "article":
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<span class='step-badge'>3</span><span class='syne' style='font-size:1rem;font-weight:700;'>Generate Outlines</span>", unsafe_allow_html=True)
             if st.session_state.selection_confirmation and (
-                st.session_state.article_type != "listicle" or st.session_state.outlines
+                not has_handler(st.session_state.article_type) or st.session_state.outlines
             ):
                 st.success(st.session_state.selection_confirmation)
                 st.session_state.selection_confirmation = ""
@@ -497,14 +515,15 @@ if st.session_state.mode == "article":
                 placeholder="e.g. keep both outlines very beginner-friendly",
                 key="dir_outline"
             )
-            is_listicle_flow = st.session_state.article_type == "listicle"
-            generate_label = "Generate 2 List Skeletons" if is_listicle_flow else "Generate 2 Outlines"
+            use_skeleton_flow = has_handler(st.session_state.article_type)
+            generate_label = "Generate 2 Skeletons" if use_skeleton_flow else "Generate 2 Outlines"
             if st.button(generate_label, disabled=not st.session_state.api_key):
-                with st.spinner("Generating list skeletons..." if is_listicle_flow else "Generating outlines..."):
-                    if is_listicle_flow:
+                with st.spinner("Generating skeletons..." if use_skeleton_flow else "Generating outlines..."):
+                    if use_skeleton_flow:
                         st.session_state.skeletons = generate_skeletons(
                             get_client(), st.session_state.keyword, st.session_state.research,
-                            st.session_state.brand_knowledge, st.session_state.directive_outline
+                            effective_brand_knowledge, st.session_state.directive_outline,
+                            article_type=st.session_state.article_type
                         )
                         st.session_state.outlines = None
                         st.session_state.chosen_skeleton = None
@@ -512,26 +531,29 @@ if st.session_state.mode == "article":
                     else:
                         st.session_state.outlines = generate_outlines(
                             get_client(), st.session_state.keyword,
-                            st.session_state.research, st.session_state.brand_knowledge,
+                            st.session_state.research, effective_brand_knowledge,
                             st.session_state.directive_outline,
                             article_type=st.session_state.article_type
                         )
                     st.session_state.chosen_outline = None
                     st.session_state.drafted = None
                     st.session_state.final_article = ""
+                    st.session_state.quality_check = None
 
             # Listicles deliberately stop at a lightweight, editable skeleton before expansion.
-            if is_listicle_flow and st.session_state.skeletons:
+            if use_skeleton_flow and st.session_state.skeletons:
                 st.markdown("<div class='lbl' style='margin-top:1rem;'>3A — Choose and edit a skeleton</div>", unsafe_allow_html=True)
                 skeletons = st.session_state.skeletons
                 edited_skeletons = {}
-                minimum_items = _min_listicle_items(st.session_state.research)
+                is_listicle_type = st.session_state.article_type == "listicle"
+                minimum_items = _min_listicle_items(st.session_state.research) if is_listicle_type else None
                 for label in ("A", "B"):
                     skeleton = skeletons.get(f"skeleton_{label.lower()}", {})
                     if not skeleton:
                         continue
                     item_count = len(skeleton.get("the_list", []))
-                    st.markdown(f"<div class='card'><div class='syne' style='font-size:1rem;font-weight:700;'>Skeleton {label} — {skeleton.get('tone', '')}</div><div style='font-size:0.8rem;color:#666;'>{skeleton.get('tone_rationale', '')}</div><div class='lbl' style='margin-top:0.5rem;'>List coverage: {item_count} items (minimum target: {minimum_items})</div></div>", unsafe_allow_html=True)
+                    coverage_note = f"List coverage: {item_count} items (minimum target: {minimum_items})" if is_listicle_type else f"Item coverage: {item_count}"
+                    st.markdown(f"<div class='card'><div class='syne' style='font-size:1rem;font-weight:700;'>Skeleton {label} — {skeleton.get('tone', '')}</div><div style='font-size:0.8rem;color:#666;'>{skeleton.get('tone_rationale', '')}</div><div class='lbl' style='margin-top:0.5rem;'>{coverage_note}</div></div>", unsafe_allow_html=True)
                     st.markdown("<div class='lbl'>Before the list</div>", unsafe_allow_html=True)
                     pre_list = st.data_editor(
                         skeleton.get("pre_list", []), num_rows="dynamic", hide_index=True,
@@ -585,10 +607,11 @@ if st.session_state.mode == "article":
                         st.session_state.directive_outline,
                         f"Feedback on the prior skeletons: {st.session_state.skeleton_feedback}",
                     ]))
-                    with st.spinner("Regenerating list skeletons from your feedback..."):
+                    with st.spinner("Regenerating skeletons from your feedback..."):
                         st.session_state.skeletons = generate_skeletons(
                             get_client(), st.session_state.keyword, st.session_state.research,
-                            st.session_state.brand_knowledge, feedback_directive
+                            effective_brand_knowledge, feedback_directive,
+                            article_type=st.session_state.article_type
                         )
                         st.session_state.chosen_skeleton = None
                         st.session_state.outlines = None
@@ -619,14 +642,15 @@ if st.session_state.mode == "article":
                     option_ids = [option["id"] for option in options]
                     selected_option = st.radio("Structure preset", option_ids, format_func=lambda oid: next(option["label"] for option in options if option["id"] == oid), horizontal=True)
                     preset = next(option for option in options if option["id"] == selected_option)
+                    handler_components = get_handler(st.session_state.article_type).available_components()
                     suggested_components = [
                         component for component in approved_skeleton.get("recommended_structure", [])
-                        if component in ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"]
+                        if component in handler_components
                     ] or preset["components"]
                     if approved_skeleton.get("structure_rationale"):
                         st.caption(f"Research-based suggestion: {', '.join(suggested_components)} — {approved_skeleton['structure_rationale']}")
                     components = st.multiselect(
-                        "Elements inside every list-item H2 — not sections to draft", ["heading", "paragraph", "table", "pros_cons", "bullets", "screenshot", "quote"],
+                        "Elements inside every list-item H2 — not sections to draft", handler_components,
                         default=suggested_components, key=f"listicle_components_{st.session_state.skeleton_version}"
                     )
                     if "heading" not in components:
@@ -635,24 +659,28 @@ if st.session_state.mode == "article":
                         with st.spinner("Expanding the approved skeleton..."):
                             expanded = expand_outline(
                                 get_client(), st.session_state.keyword, approved_skeleton,
-                                components, st.session_state.research, st.session_state.brand_knowledge,
+                                components, st.session_state.research, effective_brand_knowledge,
                                 st.session_state.directive_outline,
+                                article_type=st.session_state.article_type
                             )
                             expanded["sample_headings"] = selected_sample_headings
                             st.session_state.outlines = {"outline_a": expanded}
                             st.session_state.chosen_outline = "A"
                             st.session_state.skeletons = None
                             st.session_state.chosen_skeleton = None
-                            st.session_state.selection_confirmation = "Your selected listicle outline has been expanded and is ready to draft."
+                            st.session_state.selection_confirmation = "Your selected outline has been expanded and is ready to draft."
                             st.session_state.drafted = None
                             st.session_state.final_article = ""
+                            st.session_state.quality_check = None
                             st.rerun()
 
             if st.session_state.outlines:
                 outlines = st.session_state.outlines
                 oa, ob = outlines.get("outline_a"), outlines.get("outline_b")
                 directive_for_warning = st.session_state.directive_outline or st.session_state.outline_feedback or ""
-                is_listicle_now = st.session_state.article_type == "listicle" or _looks_like_listicle_topic(st.session_state.keyword, directive_for_warning)
+                # Only the generic (no-handler) outline path can produce sparse, under-covered outlines —
+                # handler-registered types always go through the skeleton/expansion flow instead.
+                is_listicle_now = not has_handler(st.session_state.article_type) and _looks_like_listicle_topic(st.session_state.keyword, directive_for_warning)
                 sparse_threshold = max(2, _min_listicle_items(st.session_state.research) // 2) if is_listicle_now else 2
                 sparse_warnings = []
 
@@ -669,10 +697,10 @@ if st.session_state.mode == "article":
                     if not ol: continue
                     chosen = st.session_state.chosen_outline == label
                     card_cls = "card accent" if chosen else "card"
-                    is_expanded_listicle = is_listicle_now and bool(ol.get("skeleton"))
+                    is_expanded_listicle = bool(ol.get("skeleton"))
                     if is_expanded_listicle:
                         continue
-                    display_title = "Expanded Listicle" if is_expanded_listicle else f"Outline {label}"
+                    display_title = "Expanded Outline" if is_expanded_listicle else f"Outline {label}"
                     st.markdown(f"<div class='{card_cls}'>", unsafe_allow_html=True)
                     st.markdown(f"<div class='syne' style='font-size:1rem;font-weight:700;'>{display_title} — {ol.get('tone','')}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size:0.8rem;color:#666;margin-bottom:0.8rem;'>{ol.get('tone_rationale','')}</div>", unsafe_allow_html=True)
@@ -696,10 +724,11 @@ if st.session_state.mode == "article":
                         st.session_state.selection_confirmation = f"Outline {label} selected. Choose the complete H2 sections you want to draft in Step 4."
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
+                        st.session_state.quality_check = None
                         st.rerun()
 
                 st.markdown("<br>", unsafe_allow_html=True)
-                show_outline_feedback = not (is_listicle_now and isinstance(oa, dict) and oa.get("skeleton"))
+                show_outline_feedback = not (isinstance(oa, dict) and oa.get("skeleton"))
                 if show_outline_feedback:
                     st.session_state.outline_feedback = st.text_area(
                         "Feedback on outlines (optional)",
@@ -708,26 +737,28 @@ if st.session_state.mode == "article":
                         height=80,
                         key="outline_fb"
                     )
-                regenerate_label = "🔄 Regenerate List Skeletons" if is_listicle_flow else "🔄 Regenerate Outlines"
+                regenerate_label = "🔄 Regenerate Skeletons" if use_skeleton_flow else "🔄 Regenerate Outlines"
                 if show_outline_feedback and st.button(regenerate_label, disabled=not st.session_state.api_key):
-                    with st.spinner("Regenerating list skeletons..." if is_listicle_flow else "Regenerating outlines..."):
-                        if is_listicle_flow:
+                    with st.spinner("Regenerating skeletons..." if use_skeleton_flow else "Regenerating outlines..."):
+                        if use_skeleton_flow:
                             st.session_state.skeletons = generate_skeletons(
                                 get_client(), st.session_state.keyword, st.session_state.research,
-                                st.session_state.brand_knowledge, st.session_state.outline_feedback
+                                effective_brand_knowledge, st.session_state.outline_feedback,
+                                article_type=st.session_state.article_type
                             )
                             st.session_state.outlines = None
                             st.session_state.chosen_skeleton = None
                         else:
                             st.session_state.outlines = generate_outlines(
                                 get_client(), st.session_state.keyword,
-                                st.session_state.research, st.session_state.brand_knowledge,
+                                st.session_state.research, effective_brand_knowledge,
                                 directive=st.session_state.outline_feedback,
                                 article_type=st.session_state.article_type
                             )
                         st.session_state.chosen_outline = None
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
+                        st.session_state.quality_check = None
                         st.rerun()
 
                 # ── STEP 4: Draft selected sections ────────────────────────
@@ -768,7 +799,7 @@ if st.session_state.mode == "article":
                         with st.spinner("Writing sections..."):
                             st.session_state.drafted = draft_sections(
                                 get_client(), get_claude_client(), st.session_state.keyword, chosen_ol,
-                                selected_to_draft, st.session_state.brand_knowledge,
+                                selected_to_draft, effective_brand_knowledge,
                                 st.session_state.research, st.session_state.directive_draft
                             )
                             st.session_state.user_edits = {}
@@ -800,7 +831,7 @@ if st.session_state.mode == "article":
                                 st.session_state.drafted = revise_drafted_sections(
                                     get_claude_client(), st.session_state.keyword, chosen_ol,
                                     st.session_state.drafted.get("drafted_sections", []),
-                                    st.session_state.user_edits, st.session_state.brand_knowledge,
+                                    st.session_state.user_edits, effective_brand_knowledge,
                                     st.session_state.research, st.session_state.directive_revision,
                                 )
                                 st.session_state.user_edits = {}
@@ -820,9 +851,10 @@ if st.session_state.mode == "article":
                                 st.session_state.final_article = generate_final_article(
                                     get_client(), get_claude_client(), st.session_state.keyword, chosen_ol,
                                     st.session_state.drafted.get("drafted_sections", []),
-                                    st.session_state.user_edits, st.session_state.brand_knowledge,
+                                    st.session_state.user_edits, effective_brand_knowledge,
                                     st.session_state.research, st.session_state.directive_final
                                 )
+                                st.session_state.quality_check = None
 
                         if st.session_state.final_article:
                             st.markdown("<br>", unsafe_allow_html=True)
@@ -840,6 +872,54 @@ if st.session_state.mode == "article":
                                 file_name=f"{st.session_state.keyword.replace(' ','_')}.md",
                                 mime="text/markdown"
                             )
+
+                            # ── Optional: quality check (opt-in, costs extra tokens) ──
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            st.caption("Runs a structural/SOP compliance pass and a brand-voice pass on the article above, using a cheap model. Costs extra tokens — only runs when you click it.")
+                            if st.button("🔍 Run Quality Check", disabled=not st.session_state.api_key, key="run_quality_check"):
+                                with st.spinner("Checking SOP compliance and brand voice..."):
+                                    st.session_state.quality_check = run_quality_check(
+                                        get_client(), get_claude_client(), st.session_state.keyword,
+                                        st.session_state.final_article, chosen_ol,
+                                        st.session_state.research, effective_brand_knowledge,
+                                        st.session_state.directive_final,
+                                    )
+                                    st.session_state.final_article = st.session_state.quality_check["after_voice"]
+                                    st.rerun()
+
+                            if st.session_state.quality_check:
+                                qc = st.session_state.quality_check
+                                report = qc.get("compliance_report", {})
+                                voice_feedback = qc.get("voice_feedback", [])
+                                st.markdown("<div class='card'>", unsafe_allow_html=True)
+                                st.markdown("<div class='syne' style='font-size:0.95rem;font-weight:700;'>Quality Check Results</div>", unsafe_allow_html=True)
+
+                                st.markdown("<div class='lbl' style='margin-top:0.6rem;'>Structural / SOP compliance</div>", unsafe_allow_html=True)
+                                issues_found = report.get("missing_keywords") or report.get("banned_words_found") or report.get("structural_issues")
+                                if issues_found:
+                                    for kw in report.get("missing_keywords", []):
+                                        st.markdown(f"<div style='font-size:0.82rem;color:#9b3060;'>• Missing keyword: <b>{html.escape(str(kw))}</b></div>", unsafe_allow_html=True)
+                                    for bw in report.get("banned_words_found", []):
+                                        st.markdown(f"<div style='font-size:0.82rem;color:#9b3060;'>• Banned word used: <b>{html.escape(str(bw))}</b></div>", unsafe_allow_html=True)
+                                    for issue in report.get("structural_issues", []):
+                                        st.markdown(f"<div style='font-size:0.82rem;color:#9b3060;'>• {html.escape(str(issue))}</div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown("<div style='font-size:0.82rem;color:#1a7a6e;'>No structural or SOP issues remaining.</div>", unsafe_allow_html=True)
+
+                                st.markdown("<div class='lbl' style='margin-top:0.8rem;'>Brand voice feedback</div>", unsafe_allow_html=True)
+                                if voice_feedback:
+                                    for note in voice_feedback:
+                                        st.markdown(f"<div style='font-size:0.82rem;color:#555;'>• {html.escape(str(note))}</div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown("<div style='font-size:0.82rem;color:#1a7a6e;'>No voice issues found.</div>", unsafe_allow_html=True)
+
+                                diff_text = "\n".join(filter(None, [qc.get("diff_compliance", ""), qc.get("diff_voice", "")]))
+                                st.markdown("</div>", unsafe_allow_html=True)
+                                if diff_text.strip():
+                                    with st.expander("What changed (diff)"):
+                                        st.code(diff_text, language="diff")
+                                else:
+                                    st.caption("No edits were needed — the article above is unchanged.")
 
 # ── LANDING PAGE MODE ─────────────────────────────────────────────────────────
 else:
@@ -913,14 +993,14 @@ else:
                                 comp_texts.append({"url": u, "text": paste, "title": u, "sections": [], "slot_index": slot_index})
             if comp_texts:
                 with st.spinner("Running competitor research..."):
-                    compressed = build_research_payload(comp_texts, get_client(), st.session_state.brand_knowledge)
+                    compressed = build_research_payload(comp_texts, get_client(), effective_brand_knowledge)
                     st.session_state.lp_research = research_competitors(
-                        get_client(), st.session_state.keyword, compressed, st.session_state.brand_knowledge
+                        get_client(), st.session_state.keyword, compressed, effective_brand_knowledge
                     )
             with st.spinner("Detecting page sections..."):
                 st.session_state.lp_sections = analyze_landing_page_sections(
                     get_client(), result["text"], result["sections"],
-                    st.session_state.keyword, st.session_state.brand_knowledge
+                    st.session_state.keyword, effective_brand_knowledge
                 )
             st.session_state.lp_selected = []
             st.session_state.lp_suggestions = None
@@ -961,7 +1041,7 @@ else:
                     get_client(), st.session_state.keyword,
                     st.session_state.lp_result["text"],
                     st.session_state.lp_selected,
-                    detected, st.session_state.brand_knowledge,
+                    detected, effective_brand_knowledge,
                     st.session_state.lp_research or {},
                     st.session_state.lp_directive
                 )

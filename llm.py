@@ -12,10 +12,10 @@ try:
 except ImportError:  # pragma: no cover - optional dependency in tests
     anthropic = None
 
-from model_config import DEFAULT_JSON_MODEL, DEFAULT_PROSE_MODEL
+from model_config import DEFAULT_JSON_MODEL, DEFAULT_PROSE_MODEL, QUALITY_CHECK_MODEL
 from article_types.registry import get_handler
-from sops import SOPS, AI_VISIBILITY_GUIDE
-from verification import compliance_report
+from sops import SOPS, AI_VISIBILITY_GUIDE, SOP_BANNED_WORDS
+from verification import compliance_report, summarize_diff
 from prompts import (
     ARTICLE_TYPES,
     ARTICLE_TYPE_DESCRIPTIONS,
@@ -35,6 +35,7 @@ from prompts import (
     build_landing_page_analysis_prompt,
     build_landing_page_suggestions_prompt,
     build_compliance_revision_prompt,
+    build_brand_voice_check_prompt,
 )
 
 
@@ -238,8 +239,77 @@ def _apply_compliance_loop(text: str, rules: Dict[str, Any], *, keyword: str, to
 
 
 def _revise_with_targeted_prompt(client, claude_client, keyword: str, tone: str, brand_context: str, directive: str, draft: str, issues: List[str], max_tokens: int = 4000) -> str:
+    # Deliberately the cheap/fast model, not chat_claude — this is a targeted mechanical
+    # fix-up pass (missing keywords, banned words, structure), not creative drafting.
     system, user = build_compliance_revision_prompt(keyword, tone, brand_context, directive, issues, draft)
-    return chat_claude(claude_client, system, user, max_tokens=max_tokens)
+    return chat(client, system, user, max_tokens=max_tokens, model=QUALITY_CHECK_MODEL)
+
+
+def _build_compliance_rules(keyword: str, outline: Optional[Dict], research: Optional[Dict], brand_knowledge: str) -> Dict[str, Any]:
+    """Populate the rules dict compliance_report() expects, from the article's own
+    topic, research, and brand context — there's no fixed rule set to point at."""
+    research = research or {}
+    outline = outline or {}
+    lsi_terms = [
+        term.get("keyword", term) if isinstance(term, dict) else term
+        for term in (research.get("lsi_keywords") or [])
+    ][:6]
+    keywords = list(dict.fromkeys([keyword, *[term for term in lsi_terms if term]]))
+    banned_words = list(dict.fromkeys([*SOP_BANNED_WORDS, *extract_banned_words(brand_knowledge)]))
+    structural_headings = [
+        section.get("heading") for section in outline.get("sections", [])
+        if isinstance(section, dict) and section.get("type") != "listitem" and section.get("heading")
+    ]
+    target_word_count = outline.get("target_word_count") or 1200
+    return {
+        "keywords": keywords,
+        "banned_words": banned_words,
+        "min_words": max(300, int(target_word_count * 0.6)),
+        "required_headings": structural_headings,
+        "require_faq": any("faq" in str(heading).lower() for heading in structural_headings),
+    }
+
+
+def check_brand_voice(client, keyword: str, draft: str, brand_context: str, directive: str = "") -> Dict[str, Any]:
+    """Cheap-model pass comparing the draft against brand voice rules, with light edits applied where clearly needed."""
+    system, user = build_brand_voice_check_prompt(keyword, brand_context, draft, directive)
+    result = chat_json(client, system, user, max_tokens=6000, model=QUALITY_CHECK_MODEL)
+    if not isinstance(result, dict):
+        raise ValueError("Brand voice check returned invalid JSON")
+    return {
+        "feedback": result.get("feedback", []),
+        "revised_draft": result.get("revised_draft") or draft,
+    }
+
+
+def run_quality_check(client, claude_client, keyword: str, draft: str, outline: dict,
+                       research: dict, brand_knowledge: str, directive: str = "") -> Dict[str, Any]:
+    """Opt-in check-and-fix pass over a finished draft: deterministic SOP/structural
+    compliance first, then a brand-voice pass. Both run on the cheap structured-task
+    model — never the Sonnet call used for main drafting. Never runs automatically."""
+    brand_context = select_relevant_context(keyword, brand_knowledge)
+    tone = outline.get("tone", "") if outline else ""
+    rules = _build_compliance_rules(keyword, outline, research, brand_knowledge)
+
+    after_compliance, compliance = _apply_compliance_loop(
+        draft, rules, keyword=keyword, tone=tone, brand_context=brand_context,
+        directive=directive, writer_fn=_revise_with_targeted_prompt,
+        client=client, claude_client=claude_client, max_tokens=6000,
+    )
+
+    voice = check_brand_voice(client, keyword, after_compliance, brand_context, directive)
+    after_voice = voice["revised_draft"]
+
+    return {
+        "original": draft,
+        "after_compliance": after_compliance,
+        "after_voice": after_voice,
+        "compliance_report": compliance,
+        "voice_feedback": voice["feedback"],
+        "diff_compliance": summarize_diff(draft, after_compliance),
+        "diff_voice": summarize_diff(after_compliance, after_voice),
+        "rules_applied": rules,
+    }
 
 # ── Article: research ────────────────────────────────────────────────────────
 def synthesize_competitor_evidence(client, keyword: str, competitor_texts: list[dict], brand_knowledge: str) -> dict:
@@ -457,7 +527,10 @@ def generate_skeletons(client, keyword: str, research: dict, brand_knowledge: st
     """Generate two lightweight, editable skeleton variants for a supported type."""
     handler = get_handler(article_type)
     brand_context = select_relevant_context(keyword, brand_knowledge)
-    minimum_items = _min_listicle_items(research)
+    # Only listicles need the "cover at least N competitor items" minimum — for other
+    # types (comparison options, tutorial steps, guide subtopics, review criteria) the
+    # right count is whatever is genuinely relevant, not a competitor-derived floor.
+    minimum_items = _min_listicle_items(research) if article_type == "listicle" else 1
 
     def generate_one(label: str, contrast_note: str = "") -> dict:
         system, user = handler.build_skeleton_prompt(

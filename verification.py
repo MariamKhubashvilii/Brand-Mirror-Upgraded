@@ -24,10 +24,10 @@ def simple_stem(token: str) -> str:
 
 def keyword_present(text: str, keyword: str) -> bool:
     norm_text = set(simple_stem(t) for t in normalize_token(text).split())
-    norm_kw = simple_stem(normalize_token(keyword))
-    if not norm_kw:
+    keyword_tokens = [simple_stem(t) for t in normalize_token(keyword).split() if t]
+    if not keyword_tokens:
         return False
-    return norm_kw in norm_text
+    return all(token in norm_text for token in keyword_tokens)
 
 
 def compliance_report(draft: str, rules: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -88,4 +88,5 @@ def summarize_diff(before: str, after: str) -> str:
         tofile="after",
         lineterm="",
     )
-    return "\n".join(diff[:80])
+    lines = list(diff)[:80]
+    return "\n".join(lines)

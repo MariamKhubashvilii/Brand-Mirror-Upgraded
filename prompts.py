@@ -367,6 +367,26 @@ Return JSON:
     return system, user
 
 
+def build_brand_voice_check_prompt(keyword: str, brand_context: str, draft: str, directive: str = "") -> tuple[str, str]:
+    system = f"""You are a careful line editor checking a finished article against brand voice rules, not a rewriter.
+Brand voice rules: {SOPS}
+{build_guardrail_prompt()}
+Only change wording that clearly violates the brand voice rules or reads generically instead of specifically. Do not change facts, structure, headings, or section order. Do not rewrite sentences that are already fine. If the draft already fits the voice, return it unchanged. Return only valid JSON."""
+    user = f"""Keyword: {keyword}
+Relevant brand context: {brand_context}
+Custom directive: {directive or 'None'}
+
+Draft to check:
+{draft}
+
+Return JSON:
+{{
+  "feedback": ["specific note on a voice/style issue found, or empty list if none"],
+  "revised_draft": "the full draft with only the light edits needed to fix flagged issues, or the original draft unchanged if none were needed"
+}}"""
+    return system, user
+
+
 def build_compliance_revision_prompt(keyword: str, tone: str, brand_context: str, directive: str, issues: list[str], draft: str) -> tuple[str, str]:
     system = f"""You are a careful editor. Revise the draft to fix only the listed issues. Keep the prose concise and grounded in the source text.
 {build_guardrail_prompt()}"""

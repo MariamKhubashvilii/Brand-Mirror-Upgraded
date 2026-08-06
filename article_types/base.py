@@ -22,3 +22,17 @@ class ArticleTypeHandler(ABC):
         research: Dict, brand_context: str, directive: str,
     ) -> Tuple[str, str]:
         """Return system and user prompts for the expansion stage."""
+
+    def available_components(self) -> List[str]:
+        """Full set of section components this handler recognizes, for building a selection UI.
+
+        Defaults to the union of components across structure_options(); override when the
+        handler recognizes optional components (e.g. an occasional pull quote) that don't
+        appear in any preset.
+        """
+        seen: List[str] = []
+        for option in self.structure_options():
+            for component in option.get("components", []):
+                if component not in seen:
+                    seen.append(component)
+        return seen
