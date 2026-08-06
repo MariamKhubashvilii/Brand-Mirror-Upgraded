@@ -1,0 +1,18 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtualenvs
+libraries/
+venv/
+.venv/
+env/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# OS / editor cruft
+.DS_Store
+.ipynb_checkpoints/
+.pytest_cache/
