@@ -47,6 +47,50 @@ def test_build_competitor_results_matches_html_pastes_to_original_slot_indexes()
     assert results[1]["url"] == "https://three.com"
 
 
+def test_build_competitor_results_uses_usable_text_paste_and_skips_scrape_and_html():
+    def scrape(url):
+        raise AssertionError("scrape_fn should not be called when a usable text paste is present")
+
+    def parse_html(html, label):
+        raise AssertionError("parse_html_fn should not be called when a usable text paste is present")
+
+    results = build_competitor_results(
+        ["https://one.com"],
+        ["<p>html paste, should be ignored</p>"],
+        scrape,
+        parse_html,
+        ["plain text " * 20],
+        lambda text: len(text.split()) >= 10,
+    )
+
+    assert len(results) == 1
+    assert results[0]["success"] is True
+    assert results[0]["text"] == ("plain text " * 20).strip()
+    assert results[0]["slot_index"] == 0
+
+
+def test_build_competitor_results_rejects_unusable_text_paste_without_falling_back():
+    def scrape(url):
+        raise AssertionError("scrape_fn should not be called when a text paste was provided, even if too short")
+
+    def parse_html(html, label):
+        raise AssertionError("parse_html_fn should not be called when a text paste was provided, even if too short")
+
+    results = build_competitor_results(
+        ["https://one.com"],
+        [""],
+        scrape,
+        parse_html,
+        ["too short"],
+        lambda text: len(text.split()) >= 10,
+        lambda text: f"Only {len(text.split())} words pasted — needs at least 10.",
+    )
+
+    assert len(results) == 1
+    assert results[0]["success"] is False
+    assert results[0]["error"] == "Only 2 words pasted — needs at least 10."
+
+
 def test_finalize_competitor_results_keeps_all_sources_when_pastes_fill_failures():
     results = [
         {"url": "https://one.com", "success": False, "slot_index": 0},

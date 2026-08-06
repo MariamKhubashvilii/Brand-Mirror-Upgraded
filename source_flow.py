@@ -1,14 +1,33 @@
-from typing import Callable, List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 
-def build_competitor_results(comp_urls: List[str], comp_html_pastes: List[str], scrape_fn: Callable[[str], dict], parse_html_fn: Callable[[str, str], dict]):
-    urls = [u.strip() for u in comp_urls if u.strip()]
+def build_competitor_results(
+    comp_urls: List[str],
+    comp_html_pastes: List[str],
+    scrape_fn: Callable[[str], dict],
+    parse_html_fn: Callable[[str, str], dict],
+    comp_text_pastes: Optional[List[str]] = None,
+    is_usable_paste_fn: Optional[Callable[[str], bool]] = None,
+    paste_shortfall_fn: Optional[Callable[[str], str]] = None,
+):
+    comp_text_pastes = comp_text_pastes or []
+    is_usable = is_usable_paste_fn or (lambda text: bool(text.strip()))
     results = []
     for slot_index, url in enumerate(comp_urls):
         if not url.strip():
             continue
+        text_paste = comp_text_pastes[slot_index].strip() if slot_index < len(comp_text_pastes) else ""
         html_paste = comp_html_pastes[slot_index].strip() if slot_index < len(comp_html_pastes) else ""
-        if html_paste:
+        if text_paste:
+            # A plain-text paste is a deliberate opt-out of scraping/HTML parsing for this
+            # slot — if it's too short, that's a rejection to fix, not a cue to fall back
+            # to a scrape the user didn't ask for.
+            if is_usable(text_paste):
+                r = {"success": True, "text": text_paste, "title": url, "sections": [], "url": url}
+            else:
+                message = paste_shortfall_fn(text_paste) if paste_shortfall_fn else "Pasted text is too short."
+                r = {"success": False, "error": message, "url": url}
+        elif html_paste:
             r = parse_html_fn(html_paste, url)
             r["url"] = url
         else:

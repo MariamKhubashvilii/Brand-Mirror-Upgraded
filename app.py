@@ -147,17 +147,33 @@ init_state({
     # scrape pastes
     "comp_pastes": ["","",""],
     "comp_html_pastes": ["", "", ""],
+    "comp_text_pastes": ["", "", ""],
+    "paste_errors": {},
     "own_html_paste": "",
+    "own_text_paste": "",
     "lp_comp_pastes": ["", ""],
     "lp_comp_html_pastes": ["", ""],
     "lp_html_paste": "",
 })
 
 
-def is_usable_paste(text: str, min_words: int = 100) -> bool:
+MIN_PASTE_WORDS = 100
+
+
+def paste_word_count(text: str) -> int:
+    return len(re.findall(r"\b\w+\b", text or ""))
+
+
+def is_usable_paste(text: str, min_words: int = MIN_PASTE_WORDS) -> bool:
     if not text or not text.strip():
         return False
-    return len(re.findall(r"\b\w+\b", text)) >= min_words
+    return paste_word_count(text) >= min_words
+
+
+def paste_shortfall_message(text: str, min_words: int = MIN_PASTE_WORDS) -> str:
+    count = paste_word_count(text)
+    word = "word" if count == 1 else "words"
+    return f"Only {count} {word} pasted — needs at least {min_words}."
 
 
 def render_keyword_tags(keywords):
@@ -237,6 +253,15 @@ if st.session_state.mode == "article":
                 label_visibility="collapsed",
                 placeholder="Paste full HTML or an Inspect element snippet here"
             )
+        with st.expander("Or just paste your page's text (no HTML needed)", expanded=False):
+            st.session_state.own_text_paste = st.text_area(
+                "Plain text for your page",
+                value=st.session_state.own_text_paste,
+                height=120,
+                key="own_text_paste_input",
+                label_visibility="collapsed",
+                placeholder="Paste your page's visible text here — no HTML needed"
+            )
     with c2:
         st.markdown("<div class='lbl'>Competitor URLs (up to 3)</div>", unsafe_allow_html=True)
         for i in range(3):
@@ -249,6 +274,15 @@ if st.session_state.mode == "article":
                     key=f"comp_html_{i}",
                     label_visibility="collapsed",
                     placeholder="Paste full HTML or an Inspect element snippet here"
+                )
+            with st.expander(f"Or just paste Competitor {i+1}'s page text (no HTML needed)", expanded=False):
+                st.session_state.comp_text_pastes[i] = st.text_area(
+                    f"Plain text for Competitor {i+1}",
+                    value=st.session_state.comp_text_pastes[i],
+                    height=120,
+                    key=f"comp_text_{i}",
+                    label_visibility="collapsed",
+                    placeholder="Paste the page's visible text here — no HTML needed"
                 )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -273,6 +307,9 @@ if st.session_state.mode == "article":
                     st.session_state.comp_html_pastes,
                     scrape_url,
                     parse_pasted_html,
+                    st.session_state.comp_text_pastes,
+                    is_usable_paste,
+                    paste_shortfall_message,
                 )
 
             failed = [r for r in st.session_state.comp_results if not r.get("success")]
@@ -316,6 +353,13 @@ if st.session_state.mode == "article":
                         placeholder="Paste the page text here..."
                     )
                     st.session_state.comp_pastes[idx] = paste
+                    if idx in st.session_state.paste_errors:
+                        if is_usable_paste(paste):
+                            # The user has since fixed this paste — drop the stale message
+                            # instead of leaving it displayed after it no longer applies.
+                            st.session_state.paste_errors.pop(idx, None)
+                        else:
+                            st.markdown(f"<div style='font-size:0.78rem;color:#cc4400;margin-top:-0.4rem;margin-bottom:0.4rem;'>{html.escape(st.session_state.paste_errors[idx])}</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
                 all_failed_pages_pasted = all(
@@ -329,8 +373,15 @@ if st.session_state.mode == "article":
                             is_usable_paste,
                         )
                         if excluded:
-                            st.error("Research is still paused: add usable pasted content for " + ", ".join(item["url"] for item in excluded))
+                            # st.error() here would flash and vanish — st.rerun() below
+                            # discards anything rendered before it. Persist the reason
+                            # instead so it survives into the next run's render above.
+                            st.session_state.paste_errors = {
+                                item["slot_index"]: paste_shortfall_message(st.session_state.comp_pastes[item["slot_index"]])
+                                for item in excluded
+                            }
                         else:
+                            st.session_state.paste_errors = {}
                             st.session_state.comp_results = finalized_results
                             with st.spinner("Running deep research with pasted content..."):
                                 compressed = build_research_payload(st.session_state.comp_results, get_client(), effective_brand_knowledge)
@@ -425,15 +476,24 @@ if st.session_state.mode == "article":
             )
 
             if st.button("Score My Article", disabled=not st.session_state.api_key):
-                with st.spinner("Scraping your page..."):
-                    own_html = st.session_state.own_html_paste.strip()
-                    if own_html:
-                        own = parse_pasted_html(own_html, label=st.session_state.own_url)
-                        own["url"] = st.session_state.own_url
+                own_text_paste = st.session_state.own_text_paste.strip()
+                if own_text_paste:
+                    # A plain-text paste is a deliberate opt-out of scraping for this page —
+                    # if it's too short, that's a rejection to fix, not a cue to scrape anyway.
+                    if is_usable_paste(own_text_paste):
+                        own = {"success": True, "text": own_text_paste, "title": st.session_state.own_url, "sections": [], "url": st.session_state.own_url}
                     else:
-                        own = scrape_url(st.session_state.own_url)
+                        own = {"success": False, "error": paste_shortfall_message(own_text_paste)}
+                else:
+                    with st.spinner("Scraping your page..."):
+                        own_html = st.session_state.own_html_paste.strip()
+                        if own_html:
+                            own = parse_pasted_html(own_html, label=st.session_state.own_url)
+                            own["url"] = st.session_state.own_url
+                        else:
+                            own = scrape_url(st.session_state.own_url)
                 if not own["success"]:
-                    st.error(f"Could not scrape your page: {own['error']}")
+                    st.error(own["error"] if own_text_paste else f"Could not scrape your page: {own['error']}")
                     pasted = st.text_area("Paste your article content here", value="", height=180, placeholder="Paste at least 100 words of article text...")
                     if pasted.strip() and is_usable_paste(pasted):
                         with st.spinner("Scoring against SOPs..."):
@@ -444,7 +504,7 @@ if st.session_state.mode == "article":
                             st.session_state.existing_score = result
                             st.session_state.confirmed_suggestions = {}
                     elif pasted.strip():
-                        st.warning("That pasted content is too short. Add at least 100 words before scoring.")
+                        st.warning(paste_shortfall_message(pasted))
                 else:
                     with st.spinner("Scoring against SOPs..."):
                         result = score_existing_article(
