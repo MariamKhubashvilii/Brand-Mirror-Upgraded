@@ -132,7 +132,7 @@ init_state({
     "research": None, "existing_score": None,
     "existing_suggestions": [], "confirmed_suggestions": {},
     "outlines": None, "chosen_outline": None, "skeletons": None, "chosen_skeleton": None,
-    "selection_confirmation": "", "skeleton_version": 0,
+    "selection_confirmation": "", "skeleton_version": 0, "outline_version": 0,
     "drafted": None, "user_edits": {},
     "final_article": "", "quality_check": None,
     "directive_outline": "", "directive_draft": "", "directive_revision": "", "directive_final": "",
@@ -725,6 +725,7 @@ if st.session_state.mode == "article":
                             )
                             expanded["sample_headings"] = selected_sample_headings
                             st.session_state.outlines = {"outline_a": expanded}
+                            st.session_state.outline_version += 1
                             st.session_state.chosen_outline = "A"
                             st.session_state.skeletons = None
                             st.session_state.chosen_skeleton = None
@@ -815,6 +816,7 @@ if st.session_state.mode == "article":
                                 directive=st.session_state.outline_feedback,
                                 article_type=st.session_state.article_type
                             )
+                        st.session_state.outline_version += 1
                         st.session_state.chosen_outline = None
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
@@ -840,13 +842,14 @@ if st.session_state.mode == "article":
 
                     structural_to_draft = st.multiselect(
                         "Structural sections to draft", structural_headings,
-                        default=[heading for heading in structural_headings if heading in sample_headings] or structural_headings[:2], key="structural_sections_to_draft"
+                        default=[heading for heading in structural_headings if heading in sample_headings] or structural_headings[:2],
+                        key=f"structural_sections_to_draft_{st.session_state.outline_version}"
                     )
                     list_items_to_draft = st.multiselect(
                         "List items to draft", list_item_headings,
-                        default=[heading for heading in list_item_headings if heading in sample_headings],
+                        default=[heading for heading in list_item_headings if heading in sample_headings] or list_item_headings[:2],
                         placeholder="Choose one or more items from the main list",
-                        key="list_items_to_draft"
+                        key=f"list_items_to_draft_{st.session_state.outline_version}"
                     )
                     selected_to_draft = structural_to_draft + list_items_to_draft
                     st.session_state.directive_draft = st.text_input(
