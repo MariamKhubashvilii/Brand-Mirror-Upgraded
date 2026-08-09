@@ -1,0 +1,236 @@
+# Sticker it — Blog Voice & Writing Guide (v3)
+*A Brand Mirror knowledge file, built from stickerit.co/blog. Covers brand basics, internal linking, and blog voice/structure — pair with stickerit-scrape-reference.md for the fuller product-page facts and materials glossary.*
+
+**Source base:** real content pulled from 30+ distinct blog posts (one fetched in full, the rest via substantial multi-paragraph excerpts), spanning all four blog categories and all seven content formats the site itself uses, plus the live /custom-stickers hub and product pages for the linking map below. Full blog source log at the end of this file.
+
+---
+
+## 1. Sticker it — brand snapshot
+
+**Who we are.** Sticker it is a UK-based (Bristol) custom sticker, label, magnet, and badge printing company, launched in 2018. It's the sister brand of Kartdavid, founded in 2007 by brothers Michael and David Rubie-Todd to make custom graphics for karting/motorsport — Sticker it grew out of that materials and colour expertise once the team started fielding requests from businesses outside motorsport.
+
+**What we sell.** Core product lines: **stickers, labels, magnets, badges, sticker packs, blank labels, samples.** Within stickers specifically, three ways the site segments the range (this is the natural menu for blog topic ideas and internal links — see Section 2):
+- **By shape:** die cut, kiss cut, rounded corner, circle, rectangle, oval, square, sticker sheets
+- **By material/effect:** white vinyl, clear, holographic, glitter, mirror silver, mirror gold, fluorescent, gold foil, biodegradable paper, eco-friendly (white/clear/holo/glitter/gold/silver), transfer
+- **By use case:** heavy duty, front adhesive, static cling, floor, wall, eggshell (anti-tamper)
+
+**Who we sell to.** Two audiences on every page, never picking one over the other: **brands and small businesses** (packaging, marketing, bulk/consistent orders — proof points include Michelin, BBC, Spotify, Netflix, Coca-Cola, Nike) and **individual creators and hobbyists** (Etsy sellers, artists, LEGO builders, van-lifers — signalled by the £1 sample pack and "no minimum order").
+
+**Value props to reach for when a blog post needs a natural product mention:** free unlimited proofs before printing, UK-made with 4-day turnaround, free shipping, no minimum order (1 to 10,000+), 100% money-back guarantee, eco-friendly/compostable options.
+
+**Numbers worth having on hand:** 27 million+ stickers/products printed, 18,000+ customers, £1.2 million+ invested in manufacturing, printed on an HP Indigo digital press plus an in-house laser cutter, based at Filwood Green Business Park (solar-powered, BREEAM 93%+ certified).
+
+## 2. Internal linking reference
+
+The site's own IA already groups sticker products into shape / material-effect / use-case / eco-friendly, confirmed directly from the live /custom-stickers hub. Use this as the link map — when a blog post mentions a specific product by name, link to its dedicated page rather than the general hub.
+
+**Category hub (link here for anything general, or as the top-of-funnel link in Product-category posts):**
+`https://www.stickerit.co/custom-stickers`
+
+**By shape:**
+| Shape | URL |
+|---|---|
+| Die cut | `/custom-stickers/die-cut-stickers` |
+| Kiss cut | `/custom-stickers/kiss-cut-stickers` |
+| Rounded corner | `/custom-stickers/rounded-corner-stickers` |
+| Circle | `/custom-stickers/circle-stickers` |
+| Rectangle | `/custom-stickers/rectangle-stickers` |
+| Oval | `/custom-stickers/oval-stickers` |
+| Square | `/custom-stickers/square-stickers` |
+| Sticker sheets | `/custom-stickers/sticker-sheets` |
+
+**By material / effect:**
+| Material | URL |
+|---|---|
+| White vinyl | `/custom-stickers/white-vinyl-stickers` |
+| Clear | `/custom-stickers/clear-stickers` |
+| Holographic | `/custom-stickers/holographic-stickers` |
+| Glitter | `/custom-stickers/glitter-stickers` |
+| Mirror silver | `/custom-stickers/mirror-silver-stickers` |
+| Mirror gold | `/custom-stickers/mirror-gold-stickers` |
+| Fluorescent | `/custom-stickers/fluorescent-stickers` |
+| Gold foil | `/custom-stickers/gold-foil-stickers` |
+| Biodegradable paper | `/custom-stickers/biodegradable-paper-stickers` |
+| Transfer | `/custom-stickers/transfer-stickers` |
+
+**By use case:**
+| Use case | URL |
+|---|---|
+| Heavy duty | `/custom-stickers/heavy-duty-stickers` |
+| Front adhesive | `/custom-stickers/front-adhesive-stickers` |
+| Static cling | `/custom-stickers/static-clings` |
+| Floor | `/custom-stickers/floor-stickers` |
+| Wall | `/custom-stickers/wall-stickers` |
+| Eggshell / anti-tamper | `/custom-stickers/eggshell-stickers` |
+
+**Eco-friendly range** (link the specific variant if the post is about that effect, or the range page if it's about sustainability generally):
+| Variant | URL |
+|---|---|
+| Eco-friendly (white) | `/custom-stickers/eco-friendly-stickers` |
+| Eco-friendly clear | `/custom-stickers/eco-friendly-clear-stickers` |
+| Eco-friendly holographic | `/custom-stickers/eco-friendly-holographic-stickers` |
+| Eco-friendly glitter | `/custom-stickers/eco-friendly-glitter-stickers` |
+| Eco-friendly silver | `/custom-stickers/eco-friendly-silver-stickers` |
+| Eco-friendly gold | `/custom-stickers/eco-friendly-gold-stickers` |
+| Sustainable range hub | `/sustainable-stickers-and-labels` |
+
+**Other core product lines** (link when the post is about labels/magnets/badges rather than stickers specifically):
+`/custom-labels` · `/custom-magnets` · `/custom-badges` · `/sticker-packs` · `/blank-labels` · `/custom-samples`
+
+**Tools and support pages that blog posts routinely link to:**
+- `/tools` and `/tools/online-designer` — free sticker maker/editor (linked whenever a post mentions designing or uploading artwork)
+- `/tools/background-remover` — linked in design-prep posts
+- `/help-choose` and `/help-choose/free-guide` — linked when a post is helping someone pick between products
+- `/materials` — materials hub, good for Comparison-format posts
+- `/reorder` · `/support/faq` · `/support/shipping` · `/support/artwork-setup` · `/templates`
+
+**Note on labels:** most sticker material/shape pages have a label equivalent at `/custom-labels/[material]-labels` (e.g. `/custom-labels/holographic-labels`). Worth linking instead of the sticker version specifically when the post's context is packaging/roll/sheet use rather than individually-cut stickers.
+
+---
+
+## 3. What the blog is for
+
+The blog exists to catch search traffic a product page can't rank for, then funnel readers back to the shop through in-body links (see Section 2). Nearly every post is a direct answer to a real, specific question — not brand storytelling. The single highest-traffic post on the whole site (tens of thousands of monthly visits) is a practical how-to: getting stickers off glass. That tells you what this blog is actually for: solving a concrete problem, reliably, at scale.
+
+## 4. Two axes shape every post — category and format
+
+This is the most important structural fact in this file. **Category** (Product / Technology / Tutorials / News) governs *register* — how formal, how personal, how much first-person the post allows. **Format** (How-to / Listicle / Guide / Comparison / Definition / Story / Roundup — the site's own internal page-type labels) governs *structure* — how the post is organised, how it opens, how it closes. A post is always both: "News category, How-to format" or "Product category, Definition format." Drafting should name both before writing a word.
+
+### The category axis (register)
+
+| | Product | Technology | Tutorials | News |
+|---|---|---|---|---|
+| Job | Buying-decision content, links hard into shop pages | Deeper technical pieces for sophisticated buyers/press | How-to for people who bought, or are DIYing | Catch-all; busiest category; most personal content lives here |
+| Person | You / your | Neutral third person, occasional "you" | You (direct instruction) | I / you — first person shows up here |
+| Jargon | Defined in-line | Introduced and explained (CMYK, colour gamut) | Minimal, task-focused | Minimal |
+| First-person / anecdote | Rare | Absent | Rare | Present — the one place the voice loosens into personal register |
+
+### The format axis (structure)
+
+These are the site's own page-type tags, confirmed against real posts:
+
+**How-to** — By far the most common and highest-performing format. Opens with a short TL;DR or "quick rundown by surface/situation" before the full steps. Frequently organised as a lookup table dressed in prose: "Glass: try X. Plastic: try Y. Wood: try Z." Numbered or clearly segmented methods follow, each 3-5 short steps. Often closes on a practical caution ("test on a hidden area first") rather than a hard product push. Examples: *How to clean stickers off glass* (the site's #1 traffic page), *Sticker residue won't budge? Try these 8 fixes*, *How to remove stickers from a car*, *How to remove sticker residue from clothes*, *How to apply window decals without bubbles*, *How to make custom LEGO stickers*.
+
+**Listicle** — A grouped set of short items, each self-contained in 1-3 sentences, no item requiring the previous one. Voice inside each item is punchier and more clipped than narrative prose. Examples: *13 sticker types (and where to use them)*, *What to do with stickers*, *Sticker storage ideas*, *Displaying stickers*.
+
+**Guide** — Reference content organised for scanning and lookup rather than reading start to finish: charts, size tables, an embedded FAQ block near the end matching real search queries almost verbatim. Less personality than How-to, more like a spec sheet with connective sentences. Examples: *A cheat sheet for sticker sizes (by shape & use)*, *What is the standard bumper sticker size?*, *Understanding digital printing*.
+
+**Comparison** — Two sub-modes worth telling apart:
+- *Third-party comparison* (no product tie-in): recommends outside brands/tools on their merits, e.g. *What are the best printers for stickers?* recommends specific Epson and Canon models with a comparison table. This is pure authority-building — it doesn't sell Sticker it's own range at all, because it isn't about sticker materials.
+- *Material comparison* (on-brand): weighs Sticker it's own material options against each other using the same "use X when Y" imperative structure, e.g. *What are stickers made of?* ("Pick BOPP for products exposed to oil, water, or cold... Use polyester or PET for industrial or safety use...").
+Both sub-modes commit to real recommendations rather than hedging.
+
+**Definition** — Short, reassuring, often opens with a rhetorical question and an explicit promise that the explanation won't be jargon-heavy. Leans on a plain-language analogy to land the concept. From *What is a die cut sticker?*: the post frames the explanation as "jargon-free and easy to understand" before comparing a cutting die to a cookie cutter. Examples: *What is a die cut sticker?*, *What is a kiss cut sticker?*, *Decals vs stickers* (opens on an empathetic, relatable admission rather than a rhetorical question — "if you've ever ordered one when you really needed the other, you're not alone" — a second valid Definition-format opener).
+
+**Story** — The one format with a genuinely different skeleton: chronological, era-by-era H2 sections (ancient Egypt → 19th-century postage stamps → 1930s self-adhesive labels → 1970s-80s sticker craze → today), each grounded in a real date or named inventor rather than a vague "long ago." Closes with an explicit, clearly-labelled **"About Sticker it"** section — a distinct closer this format alone uses; other formats never break the fourth wall this directly. Example: *The history of stickers*.
+
+**Roundup** — Closely related to Listicle but lighter and longer: dozens of very short entries (a phrase or single sentence each), high whimsy, minimal explanation per item, meant for skimming and inspiration rather than decision-making. Example: *50 cool sticker ideas for 2026* ("Add charm to planners with sunny smiles and rainy-day faces... Create candy-coloured cupcakes, donuts, and macarons with cute expressions").
+
+### Why this matters for drafting
+Format can override the category default. A News-category post in Story format (*history of stickers*) still closes with a branded "About Sticker it" section even though News posts otherwise favour a soft, understated link. A Product-category post in Comparison format about third-party printers skips the sales close entirely, because there's genuinely nothing of Sticker it's own to link to. Pick format first — it decides the skeleton — then let category tune the voice inside it.
+
+## 5. Core voice pillars (hold across every category and format)
+
+1. **Answer first, sell second.** The opening line resolves the reader's actual question. Product mentions arrive last, usually one soft link.
+2. **Numbers over adjectives.** Even in casual posts: fluorescent ink reflects roughly 300% of light vs 90% for standard colour; biodegradable material composts in about 12 weeks; a minimum detail size of 3mm for transfer stickers.
+3. **Honest trade-offs, stated plainly.** Eco-friendly clear material isn't dishwasher-safe; transfer stickers cost more because someone hand-weeds them; window clings lose grip in rain. Candour is a deliberate trust signal, not a flaw to write around.
+4. **Second person throughout**, even in Technology and Guide posts.
+5. **Short sentences, short paragraphs.** Often one sentence per paragraph for a key claim or transition.
+6. **Contractions are normal.** "Don't," "doesn't," "it's," "you'll," "you're not alone."
+7. **The TL;DR-before-detail pattern is the default for practical content, not an occasional trick.** Every top-traffic How-to post pulled for this guide opens with some form of quick summary — a numbered list, a by-surface breakdown, or a one-paragraph "short answer" — before the full explanation. Treat this as close to mandatory for new How-to posts, not optional.
+
+## 6. Opener patterns (pick one deliberately)
+
+- **Concrete, specific observation** (not generic intro): the LEGO post opens by pointing out that a lot of "official" LEGO detail is actually printed stickers, not moulded bricks.
+- **Answers the title question immediately**: *Are window clings reusable?* opens "Yes, most window clings are reusable" in its first sentence, then explains why.
+- **Rhetorical question + reassurance of simplicity** (Definition format): "But what exactly does it mean?... We're here to help you. This short guide tells you exactly what a die-cut sticker really is — jargon-free and easy to understand."
+- **Empathetic, relatable admission** (Definition/Comparison format): "If you've ever ordered one when you really needed the other, you're not alone."
+- **Quick-rundown-by-situation** (How-to format): naming the 2-3 variables that actually matter ("bad prep, wrong placement, peeling too fast") before any steps begin.
+
+## 7. Closer patterns
+
+- **Default: soft, low-pressure product link.** One sentence, one link, no hard sell.
+- **Story format only: explicit "About Sticker it" branded section.** Named as its own subheading, not blended into the narrative.
+- **Comparison (third-party) format: no product close at all**, or a very indirect one — the post's job was to be genuinely useful, not to sell.
+- **How-to format: sometimes a caution rather than a close** ("test on a hidden area first"), prioritising the reader not getting hurt over getting one more link in.
+
+## 8. Vocabulary and phrase bank
+
+**Recurring functional phrases:**
+- "Here's how..." / "Here's what to do next..."
+- "That said,..." / "In practice,..."
+- "The short answer:..." / "The good news is..."
+- "Before we get into the full how-tos, here's a quick rundown..."
+- "Use X for Y. Try A for B." (imperative, paired recommendation — very common in Comparison and Guide posts)
+
+**Recurring product-boilerplate phrases:**
+- "resistant to scratches, water, and fading in sunlight"
+- "digitally cut in any shape around your design"
+- "medium-strength adhesive"
+- "ships in 4 working days" / "free proof before printing"
+
+**Words the copy leans on:** custom, durable, waterproof, resistant, compostable, digitally cut, laminate, adhesive.
+
+**Words/moves to avoid:**
+- Unsupported superlatives without a number or comparison behind them.
+- Passive corporate phrasing ("it is recommended that").
+- Hedging both ways in a comparison — the brand commits to an answer.
+- Long, clause-stacked sentences outside Technology/Guide posts.
+
+## 9. Title and meta description patterns
+
+Confirmed formats: "[X] explained," "how to [task]," "[material] vs [material]," "are/is [product] [property]," "the ultimate [topic] checklist," "the 7 best places to [do a thing]," "what is a [product]?," "[number] [things] for [year]" (Roundup/Listicle), "[topic] won't [problem]? Try these [number] fixes" (How-to).
+
+Meta descriptions name the specific question or comparison, name the deciding factors, and imply full resolution in one or two sentences — never a vague teaser.
+
+## 10. Do / Don't quick reference
+
+| Do | Don't |
+|---|---|
+| Open with the real question or a concrete observation | Open with "In today's world, stickers are more popular than ever" |
+| Give a TL;DR before a long explanation | Make the reader scroll through backstory to find the answer |
+| Back claims with a number, spec, or named mechanism | Say "really durable" with nothing behind it |
+| Commit to a real recommendation in comparisons | Hedge with "it depends, both are great" |
+| Match register to category (loosen in News, tighten in Technology) | Use one flat voice everywhere |
+| Link the specific product page (Section 2) when a named product comes up | Link the general /custom-stickers hub as a lazy default |
+| Use the format's real closer (soft link / About section / caution / nothing) | Force a product link onto every single post regardless of fit |
+
+## 11. Quick pre-publish checklist
+
+- Have I named both the category (register) and the format (structure) before drafting?
+- Does the opening line answer a real question rather than describing the brand first?
+- Is every strong claim backed by a number, spec, or named mechanism?
+- Is there at least one honest limitation, if one genuinely exists?
+- Are paragraphs short — often one or two sentences?
+- Have I linked to the specific product page for anything named, per Section 2, rather than just the hub?
+- Does the close match the format (not a reflexive product link if the format doesn't call for one)?
+- If it's a How-to: is there a scannable summary near the top?
+- Does the meta description name the specific question/comparison and imply full resolution?
+
+---
+
+## 12. Source log (transparency)
+
+Full text fetched:
+- *The history of stickers* (blog/history-of-stickers) — News, Story
+
+Substantial multi-paragraph content pulled (search-snippet level, several paragraphs each):
+
+**How-to:** how-to-clean-stickers-off-glass · remove-sticker-residue · how-to-remove-a-sticker · remove-sticker-residue-from-clothes · how-to-remove-stickers-from-a-car-effortlessly... · how-to-put-on-window-decals · apply-window-clings · make-custom-lego-stickers
+
+**Listicle / Roundup:** types-of-stickers · cool-sticker-ideas · easy-sticker-ideas
+
+**Guide:** standard-sticker-sizes · standard-bumper-sticker-size
+
+**Comparison:** best-printer-for-stickers (third-party) · what-are-stickers-made-of (on-brand) · materials-for-stickers-and-labels-a-deep-dive (on-brand) · types-of-sticker-material
+
+**Definition:** what-is-a-die-cut-sticker · whats-the-difference-between-die-cut-and-regular-stickers · decals-vs-stickers · what-is-a-custom-sticker · what-is-a-kiss-cut-sticker (referenced) · what-is-a-transfer-sticker-how-is-it-made · what-is-a-clear-sticker · what-is-a-biodegradable-paper-sticker
+
+**Product/Technology explainers:** a-technical-colour-guide-for-printing · how-to-design-clear-stickers-and-labels · how-clear-stickers-and-labels-are-made · how-to-make-clear-stickers-with-your-logo · how-are-holographic-stickers-and-labels-made · holographic-stickers-vs-mirror-silver-stickers · environmentally-friendly-stickers-breaking-down-the-options · what-is-the-difference-between-eco-friendly-and-biodegradable-stickers · biodegradable-paper-stickers-all-you-need-to-know · all-you-need-to-know-about-fluorescent-stickers-why-to-use-them · kiss-cut-stickers-vs-classic-cut-stickers
+
+**News (business/lifestyle):** sell-stickers-on-etsy · window-clings-reusable · what-are-window-clings · wall-decals-for-textured-walls · are-wall-decals-removable
+
+That's 30+ distinct posts with real content drawn from them, plus the blog index, several category pages, and the full /custom-stickers hub (for the Section 2 link map) for title/meta/URL confirmation. Posts from your traffic table not yet pulled for this version (worth a follow-up pass if you want even deeper Guide/Listicle coverage): what-is-the-difference-between-kiss-cut-stickers-and-die-cut-stickers, print-on-sticker-paper, make-stickers-with-tape, how-to-make-your-own-die-cut-stickers, why-do-people-put-uk-stickers-on-their-cars, how-to-make-stickers-sticky-again, the-coolest-fridge-magnets-we-have-come-across, how-to-make-fridge-magnets, understanding-digital-printing-a-comprehensive-guide.
+
+---
+*Sourced from stickerit.co, pulled and cross-checked 9 August 2026. Paraphrased and summarised throughout; short quotes (under 15 words, one per source) are used only where they illustrate a register or opener pattern — confirm against the live URL before quoting directly in client-facing work. Product page URLs in Section 2 are relative to https://www.stickerit.co — confirm the UK vs US/FR/DE version matches the market you're writing for.*

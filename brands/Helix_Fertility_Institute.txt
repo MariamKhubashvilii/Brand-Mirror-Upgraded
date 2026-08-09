@@ -1,11 +1,15 @@
 Clinic identity
-Helix Fertility Institute, Austin, TX. Founder: Dr. Elena Vasquez, MD/PhD, reproductive endocrinologist with a biomedical engineering background. Tagline: "Fertility care, backed by data."
+Helix Fertility Institute, Austin, TX.
+ Founder: Dr. Elena Vasquez, MD/PhD, reproductive endocrinologist with a biomedical engineering background. Tagline: "Fertility care, backed by data."
 
 Brand voice
-Confident and precise, not hype-y. Leads with numbers and mechanism ("here's what the data shows and why"), never with emotional pressure or absolutist promises. Warm but clinical, like a doctor who respects your intelligence.
+Confident and precise, not hype-y. Leads with numbers and mechanism
+("here's what the data shows and why"), never with emotional pressure or absolutist promises. Warm but clinical, like a doctor who respects your intelligence.
 
 Audience
-Patients 28-42, research-oriented, often have already read CDC/SART data themselves before their first appointment. Comfortable with technology, skeptical of marketing spin, want to see the numbers behind any claim.
+Patients 28-42, research-oriented,
+often have already read CDC/SART data themselves before their first appointment.
+Comfortable with technology, skeptical of marketing spin, want to see the numbers behind any claim.
 
 USPs
 AI-assisted embryo morphology grading used alongside (not instead of) embryologist review. Time-lapse incubation for continuous embryo monitoring. In-house PGT-A genetic testing turnaround in under a week. Every patient gets a personalized success-rate estimate built from their own diagnostics plus CDC national benchmarks, not a generic clinic average.
@@ -14,10 +18,12 @@ CTA style
 "See your personalized data" / "Book a data consult," not "Start your journey today." Every CTA points toward a specific next analytical step, not an emotional appeal.
 
 Banned words
-guarantee, miracle, cure, risk-free, painless, 100% success, leverage, seamless, robust, always, never (the last two used absolutely about medical outcomes)
+guarantee, miracle, cure, risk-free, painless,
+100% success, leverage, seamless, robust, always, never (the last two used absolutely about medical outcomes)
 
 Price range
-Base cycle (medical services only): roughly $14,000-$18,000. All-in cycle cost including medication and standard add-ons: roughly $19,000-$26,000, consistent with 2026 national averages. Framed as "typical range," never a fixed quote, since meds and add-ons vary by patient.
+Base cycle (medical services only): roughly $14,000-$18,000.
+All-in cycle cost including medication and standard add-ons: roughly $19,000-$26,000, consistent with 2026 national averages. Framed as "typical range," never a fixed quote, since meds and add-ons vary by patient.
 
 Medically sensitive facts (for grounding article content)
 Live birth rates per embryo transfer are highest for patients under 35 (national aggregate figures cluster around 40-50%+) and decline with age through the late 30s and more sharply after 40, per CDC's national ART data. For egg freezing, live birth chance per thawed egg runs roughly 5-7% depending on age at freezing, with overall live birth odds (using a full batch of frozen eggs) around 50-60% if frozen before 35, dropping notably after that; ASRM generally advises against delaying elective egg freezing much past 38. Nationally, patients need an average of about 2.3 IVF cycles to achieve a live birth. All of this should carry an explicit caveat in any generated copy: these are national aggregate figures, not predictions for any individual, and actual outcomes depend on diagnosis, age, egg/sperm quality, and uterine factors, a doctor should always be consulted before treatment decisions.

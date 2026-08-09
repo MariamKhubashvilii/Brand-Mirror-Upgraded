@@ -760,6 +760,21 @@ if st.session_state.mode == "article":
                     card_cls = "card accent" if chosen else "card"
                     is_expanded_listicle = bool(ol.get("skeleton"))
                     if is_expanded_listicle:
+                        # Expansion only ever fills outline_a, so this renders once — a read-only
+                        # reminder of the structure the user is drafting from in Step 4.
+                        expanded_sections = [sec for sec in ol.get("sections", []) if isinstance(sec, dict)]
+                        headings_html = "".join(
+                            f"<div style='padding:0.15rem 0;color:#333;'>{number}. {html.escape(str(sec.get('heading', 'Untitled section')))} <span style='color:#8899bb;font-size:0.7rem;'>{html.escape(str(sec.get('level', 'H2')))}</span></div>"
+                            for number, sec in enumerate(expanded_sections, start=1)
+                        )
+                        st.markdown(
+                            f"<div class='card accent'>"
+                            f"<div class='syne' style='font-size:1rem;font-weight:700;'>Expanded Outline — {ol.get('tone','')}</div>"
+                            f"<div style='font-size:0.8rem;color:#666;'>{ol.get('tone_rationale','')}</div>"
+                            f"<div class='lbl' style='margin-top:0.5rem;'>Complete section sequence — {len(expanded_sections)} headings</div>"
+                            f"{headings_html}</div>",
+                            unsafe_allow_html=True,
+                        )
                         continue
                     display_title = "Expanded Outline" if is_expanded_listicle else f"Outline {label}"
                     st.markdown(f"<div class='{card_cls}'>", unsafe_allow_html=True)
@@ -782,6 +797,9 @@ if st.session_state.mode == "article":
                     st.markdown("</div>", unsafe_allow_html=True)
                     if not is_expanded_listicle and st.button(f"Choose Outline {label}", key=f"choose_{label}"):
                         st.session_state.chosen_outline = label
+                        # Step 4's multiselects are keyed by outline_version — bump it so switching
+                        # outlines resets the selections instead of reusing the previous outline's.
+                        st.session_state.outline_version += 1
                         st.session_state.selection_confirmation = f"Outline {label} selected. Choose the complete H2 sections you want to draft in Step 4."
                         st.session_state.drafted = None
                         st.session_state.final_article = ""
